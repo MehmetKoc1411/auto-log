@@ -21,14 +21,15 @@ import {
   addServiceRecord,
 } from '../services/storageService';
 import { Vehicle, ServiceRecord } from '../types/vehicle';
+import { DatePickerModal } from '../components/DatePickerModal';
 
 const SERVICE_TEMPLATES = [
   { title: 'Periyodik Bakım (Yağ & Filtre)', defaultPlusKm: 15000 },
   { title: 'Ön / Arka Fren Balatası', defaultPlusKm: 30000 },
   { title: 'TÜVTÜRK Araç Muayenesi', defaultPlusKm: 0 },
   { title: 'Zorunlu Trafik Sigortası', defaultPlusKm: 0 },
+  { title: 'Kasko Poliçesi', defaultPlusKm: 0 },
   { title: 'Akü Değişimi', defaultPlusKm: 50000 },
-  { title: 'Buji & Ateşleme Sistemi', defaultPlusKm: 40000 },
 ];
 
 export const ServiceScreen = () => {
@@ -42,8 +43,11 @@ export const ServiceScreen = () => {
   const [odometer, setOdometer] = useState('');
   const [cost, setCost] = useState('');
   const [nextDueOdo, setNextDueOdo] = useState('');
-  const [date, setDate] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Tarih State
+  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -70,8 +74,7 @@ export const ServiceScreen = () => {
       Alert.alert('Uyarı', 'Lütfen önce Gösterge sekmesinden bir araç tanımlayın.');
       return;
     }
-    const today = new Date().toISOString().split('T')[0];
-    setDate(today);
+    setServiceDate(new Date().toISOString().split('T')[0]);
     setOdometer(vehicle.currentOdo ? String(vehicle.currentOdo) : '');
     setTitle('');
     setCost('');
@@ -104,7 +107,7 @@ export const ServiceScreen = () => {
       id: `srv_${Date.now()}`,
       vehicleId: vehicle.id,
       title: title.trim(),
-      date: date.trim() || new Date().toISOString().split('T')[0],
+      date: serviceDate,
       odometer: odoNum,
       cost: costNum,
       nextDueOdo: nextOdoNum,
@@ -121,7 +124,6 @@ export const ServiceScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
-      {/* Üst Başlık Barı */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Bakım & Masraflar</Text>
@@ -186,14 +188,13 @@ export const ServiceScreen = () => {
         )}
       </ScrollView>
 
-      {/* Bakım Ekleme Modalı */}
+      {/* Modal */}
       <Modal visible={isModalOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '90%' }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.modalHeading}>🛠️ Yeni Bakım / Masraf Kaydı</Text>
 
-              {/* Hızlı Şablon Seçici */}
               <Text style={styles.fieldLabel}>Hızlı Şablon:</Text>
               <View style={styles.templateGrid}>
                 {SERVICE_TEMPLATES.map((t, idx) => (
@@ -216,6 +217,16 @@ export const ServiceScreen = () => {
                 value={title}
                 onChangeText={setTitle}
               />
+
+              <Text style={styles.fieldLabel}>İşlem Tarihi:</Text>
+              <TouchableOpacity
+                style={styles.datePickerBtn}
+                onPress={() => setIsCalendarOpen(true)}
+              >
+                <Ionicons name="calendar-outline" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
+                <Text style={styles.datePickerBtnText}>{serviceDate}</Text>
+                <Text style={styles.changeText}>Takvimden Seç</Text>
+              </TouchableOpacity>
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
@@ -249,14 +260,6 @@ export const ServiceScreen = () => {
                 onChangeText={setNextDueOdo}
               />
 
-              <Text style={styles.fieldLabel}>Tarih (YYYY-AA-GG)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="2026-09-03"
-                value={date}
-                onChangeText={setDate}
-              />
-
               <Text style={styles.fieldLabel}>Usta / Servis Notları (Opsiyonel)</Text>
               <TextInput
                 style={[styles.input, { height: 60 }]}
@@ -278,6 +281,14 @@ export const ServiceScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Tarih Seçim Takvimi */}
+      <DatePickerModal
+        visible={isCalendarOpen}
+        selectedDate={serviceDate}
+        onSelect={(newDate) => setServiceDate(newDate)}
+        onClose={() => setIsCalendarOpen(false)}
+      />
     </View>
   );
 };
@@ -444,6 +455,27 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
     marginBottom: 6,
+  },
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: SPACING.xs,
+  },
+  datePickerBtnText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  changeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   templateGrid: {
     flexDirection: 'row',

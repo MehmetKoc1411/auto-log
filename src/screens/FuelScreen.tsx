@@ -22,6 +22,7 @@ import {
   addFuelEntry,
 } from '../services/storageService';
 import { Vehicle, FuelEntry } from '../types/vehicle';
+import { DatePickerModal } from '../components/DatePickerModal';
 
 export const FuelScreen = () => {
   const insets = useSafeAreaInsets();
@@ -34,7 +35,10 @@ export const FuelScreen = () => {
   const [liters, setLiters] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
   const [isFullTank, setIsFullTank] = useState(true);
-  const [date, setDate] = useState('');
+
+  // Tarih State
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,8 +65,7 @@ export const FuelScreen = () => {
       Alert.alert('Uyarı', 'Lütfen önce Gösterge sekmesinden bir araç ekleyin.');
       return;
     }
-    const today = new Date().toISOString().split('T')[0];
-    setDate(today);
+    setDate(new Date().toISOString().split('T')[0]);
     setOdometer(vehicle.currentOdo ? String(vehicle.currentOdo) : '');
     setLiters('');
     setTotalPrice('');
@@ -85,7 +88,7 @@ export const FuelScreen = () => {
     if (odoNum < vehicle.currentOdo) {
       Alert.alert(
         'Kilometre Uyarısı',
-        `Girilen kilometre (${odoNum.toLocaleString('tr-TR')} km), aracın mevcut kilometresinden (${vehicle.currentOdo.toLocaleString('tr-TR')} km) daha düşük olamaz.`
+        `Girilen kilometre (${odoNum.toLocaleString('tr-TR')} km), mevcut kilometreden (${vehicle.currentOdo.toLocaleString('tr-TR')} km) daha düşük olamaz.`
       );
       return;
     }
@@ -95,7 +98,7 @@ export const FuelScreen = () => {
     const newEntry: FuelEntry = {
       id: `fuel_${Date.now()}`,
       vehicleId: vehicle.id,
-      date: date.trim() || new Date().toISOString().split('T')[0],
+      date,
       odometer: odoNum,
       liters: literNum,
       totalPrice: priceNum,
@@ -109,10 +112,9 @@ export const FuelScreen = () => {
     loadFuelData();
   };
 
-  // İki dolum arasındaki tüketimi hesaplama
-  const getConsumptionForEntry = (currentIndex: number): string | null => {
+  const getConsumptionAndCostPerKm = (currentIndex: number) => {
     const current = entries[currentIndex];
-    const previous = entries[currentIndex + 1]; // Liste ters sıralı olduğu için önceki kayıt currentIndex + 1
+    const previous = entries[currentIndex + 1];
 
     if (!current || !previous || !current.isFullTank || !previous.isFullTank) return null;
 
@@ -120,12 +122,16 @@ export const FuelScreen = () => {
     if (kmDiff <= 0) return null;
 
     const l100 = (current.liters / kmDiff) * 100;
-    return `${l100.toFixed(1)} L/100km`;
+    const costPerKm = current.totalPrice / kmDiff;
+
+    return {
+      consumption: `${l100.toFixed(1)} L/100km`,
+      costPerKm: `${costPerKm.toFixed(2)} ₺/km`,
+    };
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
-      {/* Başlık Alanı */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Yakıt Günlüğü</Text>
@@ -158,7 +164,7 @@ export const FuelScreen = () => {
           </View>
         ) : (
           entries.map((item, idx) => {
-            const consumption = getConsumptionForEntry(idx);
+            const stats = getConsumptionAndCostPerKm(idx);
             return (
               <View key={item.id} style={styles.fuelCard}>
                 <View style={styles.cardTopRow}>
@@ -166,18 +172,12 @@ export const FuelScreen = () => {
                     <Ionicons name="funnel" size={16} color={COLORS.secondary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.cardOdo}>
-                      {item.odometer.toLocaleString('tr-TR')} km
-                    </Text>
+                    <Text style={styles.cardOdo}>{item.odometer.toLocaleString('tr-TR')} km</Text>
                     <Text style={styles.cardDate}>📅 {item.date}</Text>
                   </View>
                   <View style={styles.priceCol}>
-                    <Text style={styles.totalPriceText}>
-                      {item.totalPrice.toFixed(0)} ₺
-                    </Text>
-                    <Text style={styles.unitPriceText}>
-                      {item.pricePerLiter.toFixed(2)} ₺/L
-                    </Text>
+                    <Text style={styles.totalPriceText}>{item.totalPrice.toFixed(0)} ₺</Text>
+                    <Text style={styles.unitPriceText}>{item.pricePerLiter.toFixed(2)} ₺/L</Text>
                   </View>
                 </View>
 
@@ -185,21 +185,30 @@ export const FuelScreen = () => {
 
                 <View style={styles.cardBottomRow}>
                   <View style={styles.badgeItem}>
-                    <Text style={styles.badgeLabel}>Litre</Text>
+                    <Text style={styles.badgeLabel}>Alınan Litre</Text>
                     <Text style={styles.badgeVal}>{item.liters} L</Text>
                   </View>
 
                   <View style={styles.badgeItem}>
                     <Text style={styles.badgeLabel}>Depo Durumu</Text>
-                    <Text style={[styles.badgeVal, { color: item.isFullTank ? COLORS.success : COLORS.textSecondary }]}>
-                      {item.isFullTank ? 'Full Dolum ✅' : 'Kısmi Dolum'}
+                    <Text
+                      style={[
+                        styles.badgeVal,
+                        { color: item.isFullTank ? COLORS.success : COLORS.textSecondary },
+                      ]}
+                    >
+                      {item.isFullTank ? 'Full Dolum ✅' : 'Kısmi'}
                     </Text>
                   </View>
 
-                  {consumption && (
-                    <View style={[styles.badgeItem, styles.consumptionBadge]}>
-                      <Text style={styles.consumptionLabel}>Ort. Tüketim</Text>
-                      <Text style={styles.consumptionVal}>{consumption}</Text>
+                  {stats && (
+                    <View style={styles.statsContainer}>
+                      <View style={styles.consumptionBadge}>
+                        <Text style={styles.consumptionVal}>{stats.consumption}</Text>
+                      </View>
+                      <View style={styles.costBadge}>
+                        <Text style={styles.costVal}>{stats.costPerKm}</Text>
+                      </View>
                     </View>
                   )}
                 </View>
@@ -209,20 +218,22 @@ export const FuelScreen = () => {
         )}
       </ScrollView>
 
-      {/* Yakıt Ekleme Modalı */}
+      {/* Modal */}
       <Modal visible={isModalOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '90%' }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.modalTitle}>⛽ Yakıt Dolum Kaydı</Text>
 
-              <Text style={styles.fieldLabel}>Alım Tarihi (YYYY-AA-GG):</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="2026-09-03"
-                value={date}
-                onChangeText={setDate}
-              />
+              <Text style={styles.fieldLabel}>Alım Tarihi:</Text>
+              <TouchableOpacity
+                style={styles.datePickerBtn}
+                onPress={() => setIsCalendarOpen(true)}
+              >
+                <Ionicons name="calendar-outline" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
+                <Text style={styles.datePickerBtnText}>{date}</Text>
+                <Text style={styles.changeText}>Takvimden Seç</Text>
+              </TouchableOpacity>
 
               <Text style={styles.fieldLabel}>Kilometre Göstergesi *</Text>
               <TextInput
@@ -257,22 +268,20 @@ export const FuelScreen = () => {
                 </View>
               </View>
 
-              {/* Birim Fiyat Önizlemesi */}
               {liters && totalPrice && (
                 <View style={styles.unitPricePreview}>
                   <Text style={styles.unitPricePreviewText}>
-                    Tahmini Birim Fiyat:{' '}
+                    Birim Fiyat:{' '}
                     {(parseFloat(totalPrice.replace(',', '.')) / parseFloat(liters.replace(',', '.'))).toFixed(2)}{' '}
                     ₺/Litre
                   </Text>
                 </View>
               )}
 
-              {/* Full Depo Switch */}
               <View style={styles.switchRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.switchTitle}>Depo Tamamen Dolduruldu mu?</Text>
-                  <Text style={styles.switchSub}>Hassas tüketim hesabı için gereklidir</Text>
+                  <Text style={styles.switchSub}>Tüketim (L/100km) hesabı için tam dolum gerekir</Text>
                 </View>
                 <Switch
                   value={isFullTank}
@@ -297,6 +306,14 @@ export const FuelScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Tarih Seçim Takvimi */}
+      <DatePickerModal
+        visible={isCalendarOpen}
+        selectedDate={date}
+        onSelect={(newDate) => setDate(newDate)}
+        onClose={() => setIsCalendarOpen(false)}
+      />
     </View>
   );
 };
@@ -452,21 +469,31 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginTop: 2,
   },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 6,
+  },
   consumptionBadge: {
     backgroundColor: COLORS.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
-  consumptionLabel: {
-    fontSize: 9,
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
   consumptionVal: {
     fontSize: 11,
     fontWeight: '800',
     color: COLORS.primary,
+  },
+  costBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  costVal: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803D',
   },
   modalOverlay: {
     flex: 1,
@@ -491,6 +518,27 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
     marginBottom: 6,
+  },
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: SPACING.xs,
+  },
+  datePickerBtnText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  changeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   input: {
     borderWidth: 1,
