@@ -107,20 +107,9 @@ export const AnalyticsScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
-      {/* Sade ve Kompakt Header */}
+      {/* Sade, Ferah & Büyük Başlık */}
       <View style={styles.header}>
-        <Text style={styles.title}>Tüketim Analizi</Text>
-        {vehicle && (
-          <View style={styles.vehicleBadge}>
-            <Ionicons
-              name={isEV ? 'flash' : 'car-sport'}
-              size={12}
-              color={isEV ? '#059669' : COLORS.primary}
-              style={{ marginRight: 4 }}
-            />
-            <Text style={styles.vehicleBadgeText}>{vehicle.plate}</Text>
-          </View>
-        )}
+        <Text style={styles.title}>Analiz</Text>
       </View>
 
       <ScrollView
@@ -245,35 +234,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.md,
   },
   title: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: '800',
     color: COLORS.textPrimary,
-  },
-  vehicleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  vehicleBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
+    letterSpacing: -0.5,
   },
   content: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xs,
   },
   emptyCard: {
     backgroundColor: COLORS.card,

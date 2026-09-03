@@ -165,29 +165,15 @@ export const FuelScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
-      {/* Yenilenmiş Kompakt Header */}
+      {/* Ultra Minimal & Şık Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.title}>{isEV ? 'Şarj Günlüğü' : 'Yakıt Günlüğü'}</Text>
-          {vehicle && (
-            <View style={styles.vehicleBadge}>
-              <Ionicons
-                name={isEV ? 'flash' : 'car-sport'}
-                size={12}
-                color={isEV ? '#059669' : COLORS.primary}
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.vehicleBadgeText}>{vehicle.plate}</Text>
-            </View>
-          )}
-        </View>
+        <Text style={styles.title}>{isEV ? 'Şarj' : 'Yakıt'}</Text>
         <TouchableOpacity
-          style={[styles.quickAddBtn, isEV && { backgroundColor: '#059669' }]}
+          style={[styles.iconAddBtn, isEV && { backgroundColor: '#ECFDF5' }]}
           onPress={openAddModal}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
-          <Ionicons name={isEV ? 'flash' : 'add'} size={16} color="#FFFFFF" />
-          <Text style={styles.quickAddBtnText}>{isEV ? 'Şarj Ekle' : 'Yakıt Gir'}</Text>
+          <Ionicons name="add" size={24} color={isEV ? '#059669' : COLORS.secondary} />
         </TouchableOpacity>
       </View>
 
@@ -476,50 +462,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.md,
   },
   title: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: '800',
     color: COLORS.textPrimary,
+    letterSpacing: -0.5,
   },
-  vehicleBadge: {
-    flexDirection: 'row',
+  iconAddBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.secondaryLight,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  vehicleBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-  },
-  quickAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.secondary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  quickAddBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
-    marginLeft: 4,
   },
   content: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xs,
   },
   emptyCard: {
     backgroundColor: COLORS.card,
