@@ -24,12 +24,12 @@ import { Vehicle, ServiceRecord } from '../types/vehicle';
 import { DatePickerModal } from '../components/DatePickerModal';
 
 const SERVICE_TEMPLATES = [
-  { title: 'Periyodik Bakım (Yağ & Filtre)', defaultPlusKm: 15000 },
-  { title: 'Ön / Arka Fren Balatası', defaultPlusKm: 30000 },
-  { title: 'TÜVTÜRK Araç Muayenesi', defaultPlusKm: 0 },
-  { title: 'Zorunlu Trafik Sigortası', defaultPlusKm: 0 },
-  { title: 'Kasko Poliçesi', defaultPlusKm: 0 },
-  { title: 'Akü Değişimi', defaultPlusKm: 50000 },
+  { title: 'Periyodik Bakım (Yağ & Filtre)', defaultPlusKm: 15000, defaultPlusDays: 365 },
+  { title: 'TÜVTÜRK Araç Muayenesi', defaultPlusKm: 0, defaultPlusDays: 730 },
+  { title: 'Zorunlu Trafik Sigortası', defaultPlusKm: 0, defaultPlusDays: 365 },
+  { title: 'Kasko Poliçesi', defaultPlusKm: 0, defaultPlusDays: 365 },
+  { title: 'Ön / Arka Fren Balatası', defaultPlusKm: 30000, defaultPlusDays: 0 },
+  { title: 'Akü Değişimi', defaultPlusKm: 50000, defaultPlusDays: 730 },
 ];
 
 export const ServiceScreen = () => {
@@ -47,7 +47,9 @@ export const ServiceScreen = () => {
 
   // Tarih State
   const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [nextDueDate, setNextDueDate] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarTarget, setCalendarTarget] = useState<'service' | 'nextDue'>('service');
 
   useFocusEffect(
     useCallback(() => {
@@ -74,7 +76,9 @@ export const ServiceScreen = () => {
       Alert.alert('Uyarı', 'Lütfen önce Gösterge sekmesinden bir araç tanımlayın.');
       return;
     }
-    setServiceDate(new Date().toISOString().split('T')[0]);
+    const today = new Date().toISOString().split('T')[0];
+    setServiceDate(today);
+    setNextDueDate('');
     setOdometer(vehicle.currentOdo ? String(vehicle.currentOdo) : '');
     setTitle('');
     setCost('');
@@ -83,11 +87,21 @@ export const ServiceScreen = () => {
     setIsModalOpen(true);
   };
 
-  const handleSelectTemplate = (tpl: { title: string; defaultPlusKm: number }) => {
+  const handleSelectTemplate = (tpl: typeof SERVICE_TEMPLATES[0]) => {
     setTitle(tpl.title);
     const currentKm = vehicle?.currentOdo || parseInt(odometer, 10) || 0;
     if (tpl.defaultPlusKm > 0 && currentKm > 0) {
       setNextDueOdo(String(currentKm + tpl.defaultPlusKm));
+    } else {
+      setNextDueOdo('');
+    }
+
+    if (tpl.defaultPlusDays > 0) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + tpl.defaultPlusDays);
+      setNextDueDate(targetDate.toISOString().split('T')[0]);
+    } else {
+      setNextDueDate('');
     }
   };
 
@@ -111,6 +125,7 @@ export const ServiceScreen = () => {
       odometer: odoNum,
       cost: costNum,
       nextDueOdo: nextOdoNum,
+      nextDueDate: nextDueDate.trim() || undefined,
       notes: notes.trim() || undefined,
     };
 
@@ -118,6 +133,13 @@ export const ServiceScreen = () => {
     setServices(updated);
     setIsModalOpen(false);
     loadServiceData();
+  };
+
+  const getDaysRemaining = (dateStr: string) => {
+    const target = new Date(dateStr);
+    const today = new Date();
+    const diffTime = target.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const totalSpent = services.reduce((sum, s) => sum + s.cost, 0);
@@ -148,47 +170,93 @@ export const ServiceScreen = () => {
             </View>
             <Text style={styles.emptyTitle}>Henüz Bakım Kaydı Yok</Text>
             <Text style={styles.emptySub}>
-              Yağ değişimi, muayene veya parça onarımlarını kaydederek araç geçmişini garantiye al.
+              Yağ değişimi, muayene veya sigorta kayıtlarını ekleyerek araç geçmişini ve son günleri takip et.
             </Text>
             <TouchableOpacity style={styles.emptyActionBtn} onPress={openAddModal}>
-              <Text style={styles.emptyActionBtnText}>+ İlk Bakım Kaydını Ekle</Text>
+              <Text style={styles.emptyActionBtnText}>+ İlk Kaydı Ekle</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          services.map((item) => (
-            <View key={item.id} style={styles.serviceCard}>
-              <View style={styles.cardHeader}>
-                <View style={styles.iconBox}>
-                  <Ionicons name="build" size={16} color={COLORS.primary} />
+          services.map((item) => {
+            const daysLeft = item.nextDueDate ? getDaysRemaining(item.nextDueDate) : null;
+            return (
+              <View key={item.id} style={styles.serviceCard}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.iconBox}>
+                    <Ionicons name="build" size={16} color={COLORS.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cardTitle}>{item.title}</Text>
+                    <Text style={styles.cardDate}>
+                      📅 {item.date} • {item.odometer.toLocaleString('tr-TR')} km
+                    </Text>
+                  </View>
+                  <Text style={styles.cardCost}>{item.cost.toLocaleString('tr-TR')} ₺</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>{item.title}</Text>
-                  <Text style={styles.cardDate}>
-                    📅 {item.date} • {item.odometer.toLocaleString('tr-TR')} km
-                  </Text>
+
+                {/* Hedef KM ve Hedef Tarih Rozetleri */}
+                <View style={styles.badgesWrapper}>
+                  {item.nextDueOdo && (
+                    <View style={styles.nextDueBadge}>
+                      <Ionicons name="speedometer-outline" size={13} color={COLORS.primary} style={{ marginRight: 4 }} />
+                      <Text style={styles.nextDueText}>
+                        Hedef: {item.nextDueOdo.toLocaleString('tr-TR')} km
+                        {vehicle?.currentOdo && item.nextDueOdo > vehicle.currentOdo
+                          ? ` (${(item.nextDueOdo - vehicle.currentOdo).toLocaleString('tr-TR')} km kaldı)`
+                          : ' (Süresi Geldi/Geçti)'}
+                      </Text>
+                    </View>
+                  )}
+
+                  {item.nextDueDate && daysLeft !== null && (
+                    <View
+                      style={[
+                        styles.nextDueBadge,
+                        daysLeft < 0
+                          ? styles.badgeDanger
+                          : daysLeft <= 30
+                          ? styles.badgeWarning
+                          : styles.badgeSuccess,
+                      ]}
+                    >
+                      <Ionicons
+                        name="calendar-outline"
+                        size={13}
+                        color={
+                          daysLeft < 0 ? COLORS.danger : daysLeft <= 30 ? '#D97706' : COLORS.success
+                        }
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text
+                        style={[
+                          styles.nextDueText,
+                          {
+                            color:
+                              daysLeft < 0
+                                ? COLORS.danger
+                                : daysLeft <= 30
+                                ? '#D97706'
+                                : COLORS.success,
+                          },
+                        ]}
+                      >
+                        Bitiş: {item.nextDueDate}
+                        {daysLeft < 0
+                          ? ` (${Math.abs(daysLeft)} gün gecikti!)`
+                          : ` (${daysLeft} gün kaldı)`}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.cardCost}>{item.cost.toLocaleString('tr-TR')} ₺</Text>
+
+                {item.notes && <Text style={styles.cardNotes}>💡 {item.notes}</Text>}
               </View>
-
-              {item.nextDueOdo && (
-                <View style={styles.nextDueBadge}>
-                  <Ionicons name="time-outline" size={14} color={COLORS.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.nextDueText}>
-                    Sonraki Hedef: {item.nextDueOdo.toLocaleString('tr-TR')} km
-                    {vehicle?.currentOdo && item.nextDueOdo > vehicle.currentOdo
-                      ? ` (${(item.nextDueOdo - vehicle.currentOdo).toLocaleString('tr-TR')} km kaldı)`
-                      : ' (Süresi Geldi/Geçti)'}
-                  </Text>
-                </View>
-              )}
-
-              {item.notes && <Text style={styles.cardNotes}>💡 {item.notes}</Text>}
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
 
-      {/* Modal */}
+      {/* Kayıt Modalı */}
       <Modal visible={isModalOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '90%' }]}>
@@ -213,7 +281,7 @@ export const ServiceScreen = () => {
               <Text style={styles.fieldLabel}>Yapılan İşlem *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Örn: Yağ, Yağ Filtresi, Hava Filtresi"
+                placeholder="Örn: Yağ Değişimi veya Muayene"
                 value={title}
                 onChangeText={setTitle}
               />
@@ -221,11 +289,14 @@ export const ServiceScreen = () => {
               <Text style={styles.fieldLabel}>İşlem Tarihi:</Text>
               <TouchableOpacity
                 style={styles.datePickerBtn}
-                onPress={() => setIsCalendarOpen(true)}
+                onPress={() => {
+                  setCalendarTarget('service');
+                  setIsCalendarOpen(true);
+                }}
               >
                 <Ionicons name="calendar-outline" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
                 <Text style={styles.datePickerBtnText}>{serviceDate}</Text>
-                <Text style={styles.changeText}>Takvimden Seç</Text>
+                <Text style={styles.changeText}>Değiştir</Text>
               </TouchableOpacity>
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -251,7 +322,7 @@ export const ServiceScreen = () => {
                 </View>
               </View>
 
-              <Text style={styles.fieldLabel}>Sonraki Bakım Hedef KM'si (İsteğe Bağlı)</Text>
+              <Text style={styles.fieldLabel}>Sonraki Bakım Hedef KM'si (İsteğe Bağlı):</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Örn: 110000"
@@ -260,7 +331,22 @@ export const ServiceScreen = () => {
                 onChangeText={setNextDueOdo}
               />
 
-              <Text style={styles.fieldLabel}>Usta / Servis Notları (Opsiyonel)</Text>
+              <Text style={styles.fieldLabel}>Poliçe / Muayene Bitiş Tarihi (Geri Sayım İçin):</Text>
+              <TouchableOpacity
+                style={styles.datePickerBtn}
+                onPress={() => {
+                  setCalendarTarget('nextDue');
+                  setIsCalendarOpen(true);
+                }}
+              >
+                <Ionicons name="alarm-outline" size={18} color={COLORS.secondary} style={{ marginRight: 8 }} />
+                <Text style={styles.datePickerBtnText}>
+                  {nextDueDate ? nextDueDate : 'Tarih Belirtilmedi'}
+                </Text>
+                <Text style={styles.changeText}>Seç</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.fieldLabel}>Usta / Servis Notları (Opsiyonel):</Text>
               <TextInput
                 style={[styles.input, { height: 60 }]}
                 placeholder="Castrol 5W-30 Edge kullanıldı, fren hidroliği kontrol edildi"
@@ -285,8 +371,14 @@ export const ServiceScreen = () => {
       {/* Tarih Seçim Takvimi */}
       <DatePickerModal
         visible={isCalendarOpen}
-        selectedDate={serviceDate}
-        onSelect={(newDate) => setServiceDate(newDate)}
+        selectedDate={calendarTarget === 'service' ? serviceDate : nextDueDate || serviceDate}
+        onSelect={(newDate) => {
+          if (calendarTarget === 'service') {
+            setServiceDate(newDate);
+          } else {
+            setNextDueDate(newDate);
+          }
+        }}
         onClose={() => setIsCalendarOpen(false)}
       />
     </View>
@@ -412,6 +504,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
+  badgesWrapper: {
+    gap: 6,
+    marginTop: 10,
+  },
   nextDueBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -419,7 +515,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    marginTop: 10,
+  },
+  badgeDanger: {
+    backgroundColor: '#FEE2E2',
+  },
+  badgeWarning: {
+    backgroundColor: '#FEF3C7',
+  },
+  badgeSuccess: {
+    backgroundColor: '#DCFCE7',
   },
   nextDueText: {
     fontSize: 11,
@@ -456,27 +560,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     marginBottom: 6,
   },
-  datePickerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: SPACING.xs,
-  },
-  datePickerBtnText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  changeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
   templateGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -512,6 +595,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     backgroundColor: COLORS.background,
     marginBottom: SPACING.xs,
+  },
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: SPACING.xs,
+  },
+  datePickerBtnText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  changeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   modalActions: {
     flexDirection: 'row',

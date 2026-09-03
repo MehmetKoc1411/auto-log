@@ -1,5 +1,4 @@
 // src/types/vehicle.ts
-
 export interface Vehicle {
   id: string;
   plate: string;
@@ -15,10 +14,11 @@ export interface FuelEntry {
   vehicleId: string;
   date: string;
   odometer: number;
-  liters: number;
-  totalPrice: number;
-  pricePerLiter: number;
-  isFullTank: boolean;
+  liters: number;           // Elektrikli araçlarda kWh değerini tutar
+  totalPrice: number;       // Toplam harcama (₺)
+  pricePerLiter: number;    // ₺/L veya ₺/kWh
+  isFullTank: boolean;      // Tam dolum / %100 Şarj
+  chargeType?: 'AC' | 'DC'; // Elektrikli araçlar için şarj tipi
 }
 
 export interface ServiceRecord {

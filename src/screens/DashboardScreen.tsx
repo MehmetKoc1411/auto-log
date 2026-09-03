@@ -40,6 +40,11 @@ export const DashboardScreen = ({ navigation }: any) => {
   const [lastFuel, setLastFuel] = useState<FuelEntry | null>(null);
   const [avgConsumption, setAvgConsumption] = useState<number | null>(null);
   const [nextService, setNextService] = useState<ServiceRecord | null>(null);
+  const [urgentAlert, setUrgentAlert] = useState<{
+    title: string;
+    daysLeft: number;
+    dateStr: string;
+  } | null>(null);
 
   // Modallar
   const [isSwitchModalVisible, setIsSwitchModalVisible] = useState(false);
@@ -77,10 +82,31 @@ export const DashboardScreen = ({ navigation }: any) => {
       const services = await getServiceRecords(current.id);
       const upcoming = services.find((s) => s.nextDueOdo && s.nextDueOdo > current.currentOdo);
       setNextService(upcoming || null);
+
+      // En yakın muayene veya sigorta tarihini hesaplama
+      const datedServices = services
+        .filter((s) => s.nextDueDate)
+        .sort((a, b) => new Date(a.nextDueDate!).getTime() - new Date(b.nextDueDate!).getTime());
+
+      if (datedServices.length > 0) {
+        const earliest = datedServices[0];
+        const targetTime = new Date(earliest.nextDueDate!).getTime();
+        const todayTime = new Date().getTime();
+        const diffDays = Math.ceil((targetTime - todayTime) / (1000 * 60 * 60 * 24));
+
+        setUrgentAlert({
+          title: earliest.title,
+          daysLeft: diffDays,
+          dateStr: earliest.nextDueDate!,
+        });
+      } else {
+        setUrgentAlert(null);
+      }
     } else {
       setLastFuel(null);
       setAvgConsumption(null);
       setNextService(null);
+      setUrgentAlert(null);
     }
   };
 
@@ -184,6 +210,57 @@ export const DashboardScreen = ({ navigation }: any) => {
               </View>
             </View>
 
+            {/* Muayene / Sigorta Geri Sayım Rozeti */}
+            {urgentAlert && (
+              <View
+                style={[
+                  styles.urgentAlertCard,
+                  urgentAlert.daysLeft < 0
+                    ? styles.alertDanger
+                    : urgentAlert.daysLeft <= 30
+                    ? styles.alertWarning
+                    : styles.alertInfo,
+                ]}
+              >
+                <Ionicons
+                  name={urgentAlert.daysLeft <= 30 ? 'warning' : 'shield-checkmark'}
+                  size={24}
+                  color={
+                    urgentAlert.daysLeft < 0
+                      ? COLORS.danger
+                      : urgentAlert.daysLeft <= 30
+                      ? '#D97706'
+                      : COLORS.primary
+                  }
+                  style={{ marginRight: 10 }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.urgentAlertTitle,
+                      {
+                        color:
+                          urgentAlert.daysLeft < 0
+                            ? COLORS.danger
+                            : urgentAlert.daysLeft <= 30
+                            ? '#B45309'
+                            : COLORS.primary,
+                      },
+                    ]}
+                  >
+                    {urgentAlert.title}
+                  </Text>
+                  <Text style={styles.urgentAlertSub}>
+                    {urgentAlert.daysLeft < 0
+                      ? `Süresi ${Math.abs(urgentAlert.daysLeft)} gün geçti! (Cezalı)`
+                      : urgentAlert.daysLeft === 0
+                      ? 'Bugün son gün!'
+                      : `Bitiş: ${urgentAlert.dateStr} (${urgentAlert.daysLeft} gün kaldı)`}
+                  </Text>
+                </View>
+              </View>
+            )}
+
             {/* İstatistik Göstergeleri */}
             <Text style={styles.sectionHeading}>Verimlilik & Tüketim</Text>
             <View style={styles.metricsGrid}>
@@ -272,7 +349,7 @@ export const DashboardScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            {/* Yaklaşan Bakım Uyarısı */}
+            {/* Yaklaşan Bakım KM Durumu */}
             <Text style={styles.sectionHeading}>Servis & Bakım Durumu</Text>
             {nextService && nextService.nextDueOdo ? (
               <View style={styles.serviceCard}>
@@ -552,7 +629,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -593,6 +670,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
     marginTop: 1,
+  },
+  urgentAlertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 16,
+    marginVertical: SPACING.xs,
+    borderWidth: 1,
+  },
+  alertDanger: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  alertWarning: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  alertInfo: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#BAE6FD',
+  },
+  urgentAlertTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  urgentAlertSub: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   sectionHeading: {
     fontSize: 15,
