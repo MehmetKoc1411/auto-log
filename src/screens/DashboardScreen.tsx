@@ -19,6 +19,7 @@ import {
   getActiveVehicleId,
   setActiveVehicleId,
   saveVehicle,
+  deleteVehicle,
   getFuelEntries,
   calculateAverageConsumption,
   getServiceRecords,
@@ -83,7 +84,6 @@ export const DashboardScreen = ({ navigation }: any) => {
       const upcoming = services.find((s) => s.nextDueOdo && s.nextDueOdo > current.currentOdo);
       setNextService(upcoming || null);
 
-      // En yakın muayene veya sigorta tarihini hesaplama
       const datedServices = services
         .filter((s) => s.nextDueDate)
         .sort((a, b) => new Date(a.nextDueDate!).getTime() - new Date(b.nextDueDate!).getTime());
@@ -114,6 +114,28 @@ export const DashboardScreen = ({ navigation }: any) => {
     await setActiveVehicleId(selected.id);
     setIsSwitchModalVisible(false);
     loadDashboard();
+  };
+
+  const handleDeleteVehicle = (targetVehicle: Vehicle) => {
+    Alert.alert(
+      'Aracı Sil',
+      `"${targetVehicle.plate}" plakalı aracı ve bu araca ait tüm yakıt/bakım kayıtlarını kalıcı olarak silmek istediğinize emin misiniz?`,
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = await deleteVehicle(targetVehicle.id);
+            setVehicles(updated);
+            if (updated.length === 0) {
+              setIsSwitchModalVisible(false);
+            }
+            loadDashboard();
+          },
+        },
+      ]
+    );
   };
 
   const handleCreateVehicle = async () => {
@@ -147,7 +169,7 @@ export const DashboardScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.xs }]}>
-      {/* Üst Bar: Araç Değiştirici */}
+      {/* Üst Bar: Araç Değiştirici & Garaj Butonu */}
       {vehicle && (
         <View style={styles.topBar}>
           <TouchableOpacity
@@ -382,7 +404,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         )}
       </ScrollView>
 
-      {/* Araç Değiştirme Modalı */}
+      {/* Araç Değiştirme ve Silme Modalı */}
       <Modal visible={isSwitchModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -391,44 +413,50 @@ export const DashboardScreen = ({ navigation }: any) => {
               const isSelected = v.id === vehicle?.id;
               const isVehicleEV = v.fuelType === 'electric';
               return (
-                <TouchableOpacity
+                <View
                   key={v.id}
                   style={[styles.vehicleRow, isSelected && styles.selectedVehicleRow]}
-                  onPress={() => handleSelectVehicle(v)}
                 >
-                  <Ionicons
-                    name={isVehicleEV ? 'flash' : 'car-sport'}
-                    size={20}
-                    color={
-                      isSelected
-                        ? isVehicleEV
-                          ? '#059669'
-                          : COLORS.primary
-                        : COLORS.textSecondary
-                    }
-                    style={{ marginRight: 12 }}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.vehiclePlate,
-                        isSelected && { color: isVehicleEV ? '#059669' : COLORS.primary },
-                      ]}
-                    >
-                      {v.plate}
-                    </Text>
-                    <Text style={styles.vehicleSub}>
-                      {v.brand} {v.model} • {v.currentOdo.toLocaleString('tr-TR')} km
-                    </Text>
-                  </View>
-                  {isSelected && (
+                  <TouchableOpacity
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                    onPress={() => handleSelectVehicle(v)}
+                  >
                     <Ionicons
-                      name="checkmark-circle"
+                      name={isVehicleEV ? 'flash' : 'car-sport'}
                       size={20}
-                      color={isVehicleEV ? '#059669' : COLORS.primary}
+                      color={
+                        isSelected
+                          ? isVehicleEV
+                            ? '#059669'
+                            : COLORS.primary
+                          : COLORS.textSecondary
+                      }
+                      style={{ marginRight: 12 }}
                     />
-                  )}
-                </TouchableOpacity>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.vehiclePlate,
+                          isSelected && { color: isVehicleEV ? '#059669' : COLORS.primary },
+                        ]}
+                      >
+                        {v.plate}
+                      </Text>
+                      <Text style={styles.vehicleSub}>
+                        {v.brand} {v.model} • {v.currentOdo.toLocaleString('tr-TR')} km
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Silme İkonu */}
+                  <TouchableOpacity
+                    style={styles.vehicleDeleteBtn}
+                    onPress={() => handleDeleteVehicle(v)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
               );
             })}
 
@@ -846,6 +874,7 @@ const styles = StyleSheet.create({
   vehicleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: COLORS.background,
     padding: 12,
     borderRadius: 14,
@@ -866,6 +895,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSecondary,
     marginTop: 1,
+  },
+  vehicleDeleteBtn: {
+    padding: 8,
+    marginLeft: 8,
   },
   modalAddVehicleBtn: {
     paddingVertical: 12,
