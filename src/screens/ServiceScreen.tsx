@@ -19,6 +19,7 @@ import {
   getVehicles,
   getServiceRecords,
   addServiceRecord,
+  deleteServiceRecord,
 } from '../services/storageService';
 import { Vehicle, ServiceRecord } from '../types/vehicle';
 import { DatePickerModal } from '../components/DatePickerModal';
@@ -32,7 +33,6 @@ const TEMPLATES: {
   defaultPlusKm?: number;
   defaultPlusDays?: number;
 }[] = [
-  // Mekanik & Periyodik Bakımlar
   { title: 'Periyodik Bakım (Yağ & Filtre)', icon: 'construct', category: 'maintenance', defaultPlusKm: 15000 },
   { title: 'Ön / Arka Fren Balatası', icon: 'disc', category: 'maintenance', defaultPlusKm: 30000 },
   { title: 'Triger Kayışı & Seti', icon: 'sync', category: 'maintenance', defaultPlusKm: 80000 },
@@ -42,8 +42,6 @@ const TEMPLATES: {
   { title: 'Lastik Değişimi / Rot-Balans', icon: 'git-commit', category: 'maintenance', defaultPlusKm: 40000 },
   { title: 'Ön Takım & Amortisör', icon: 'hardware-chip', category: 'maintenance', defaultPlusKm: 50000 },
   { title: 'Klima Gazı & Bakımı', icon: 'snow', category: 'maintenance', defaultPlusKm: 30000 },
-
-  // Yasal, Sigorta & Kontroller
   { title: 'TÜVTÜRK Araç Muayenesi', icon: 'shield-checkmark', category: 'legal', defaultPlusDays: 730 },
   { title: 'Egzoz Emisyon Ölçümü', icon: 'cloud', category: 'legal', defaultPlusDays: 365 },
   { title: 'Zorunlu Trafik Sigortası', icon: 'document-text', category: 'legal', defaultPlusDays: 365 },
@@ -158,6 +156,27 @@ export const ServiceScreen = () => {
     loadServiceData();
   };
 
+  const handleDeleteService = (recordId: string) => {
+    if (!vehicle) return;
+
+    Alert.alert(
+      'Bakım Kaydını Sil',
+      'Bu bakım/masraf kaydını silmek istediğinize emin misiniz?',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = await deleteServiceRecord(recordId, vehicle.id);
+            setServices(updated);
+            loadServiceData();
+          },
+        },
+      ]
+    );
+  };
+
   const getDaysRemaining = (dateStr: string) => {
     const target = new Date(dateStr);
     const today = new Date();
@@ -169,7 +188,6 @@ export const ServiceScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
-      {/* Üst Bar */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Bakım & Masraflar</Text>
@@ -220,6 +238,14 @@ export const ServiceScreen = () => {
                     </Text>
                   </View>
                   <Text style={styles.cardCost}>{item.cost.toLocaleString('tr-TR')} ₺</Text>
+                  {/* Silme Butonu */}
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleDeleteService(item.id)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.badgesWrapper}>
@@ -286,7 +312,6 @@ export const ServiceScreen = () => {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              {/* Kategori Seçici Tablar */}
               <View style={styles.categoryTabs}>
                 <TouchableOpacity
                   style={[styles.categoryTab, category === 'maintenance' && styles.categoryTabActive]}
@@ -325,7 +350,6 @@ export const ServiceScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Hızlı Şablonlar (Yatay Kaydırılabilir Çipler) */}
               <Text style={styles.fieldLabel}>Önerilen İşlem:</Text>
               <ScrollView
                 horizontal
@@ -354,7 +378,6 @@ export const ServiceScreen = () => {
                 })}
               </ScrollView>
 
-              {/* İşlem Başlığı */}
               <Text style={styles.fieldLabel}>İşlem Başlığı *</Text>
               <TextInput
                 style={styles.input}
@@ -363,7 +386,6 @@ export const ServiceScreen = () => {
                 onChangeText={setTitle}
               />
 
-              {/* KM ve Tutar Girişleri */}
               <View style={styles.formGridRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>İşlem KM *</Text>
@@ -388,7 +410,6 @@ export const ServiceScreen = () => {
                 </View>
               </View>
 
-              {/* İşlem Tarihi */}
               <Text style={styles.fieldLabel}>İşlem Tarihi:</Text>
               <TouchableOpacity
                 style={styles.datePickerBtn}
@@ -402,7 +423,6 @@ export const ServiceScreen = () => {
                 <Text style={styles.changeText}>Takvimden Değiştir</Text>
               </TouchableOpacity>
 
-              {/* Kategoriye Göre Özelleşen Hedef Alanı */}
               {category === 'maintenance' ? (
                 <View style={styles.targetSection}>
                   <Text style={styles.fieldLabel}>Sonraki Bakım Hedef Kilometresi:</Text>
@@ -445,7 +465,6 @@ export const ServiceScreen = () => {
                 </View>
               )}
 
-              {/* Notlar */}
               <Text style={styles.fieldLabel}>Usta / Servis Notları (Opsiyonel)</Text>
               <TextInput
                 style={[styles.input, { height: 50 }]}
@@ -454,7 +473,6 @@ export const ServiceScreen = () => {
                 onChangeText={setNotes}
               />
 
-              {/* Kaydet Butonu */}
               <TouchableOpacity style={styles.saveBtn} activeOpacity={0.85} onPress={handleSaveService}>
                 <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
                 <Text style={styles.saveBtnText}>Masrafı Kaydet</Text>
@@ -599,6 +617,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: COLORS.textPrimary,
+    marginLeft: 6,
+  },
+  deleteBtn: {
+    padding: 6,
+    marginLeft: 8,
   },
   badgesWrapper: {
     gap: 6,
@@ -632,8 +655,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
-
-  /* Bottom Sheet */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',

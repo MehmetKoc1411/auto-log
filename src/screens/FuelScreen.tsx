@@ -20,6 +20,7 @@ import {
   getVehicles,
   getFuelEntries,
   addFuelEntry,
+  deleteFuelEntry,
 } from '../services/storageService';
 import { Vehicle, FuelEntry } from '../types/vehicle';
 import { DatePickerModal } from '../components/DatePickerModal';
@@ -121,6 +122,27 @@ export const FuelScreen = () => {
     setEntries(updated);
     setIsModalOpen(false);
     loadFuelData();
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    if (!vehicle) return;
+
+    Alert.alert(
+      'Kaydı Sil',
+      'Bu yakıt kaydını silmek istediğinize emin misiniz? Ortalama tüketim hesabı yeniden hesaplanacaktır.',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = await deleteFuelEntry(entryId, vehicle.id);
+            setEntries(updated);
+            loadFuelData();
+          },
+        },
+      ]
+    );
   };
 
   const getConsumptionAndCostPerKm = (currentIndex: number) => {
@@ -226,6 +248,14 @@ export const FuelScreen = () => {
                       {item.pricePerLiter.toFixed(2)} {isEV ? '₺/kWh' : '₺/L'}
                     </Text>
                   </View>
+                  {/* Silme Butonu */}
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleDeleteEntry(item.id)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.divider} />
@@ -278,7 +308,6 @@ export const FuelScreen = () => {
                 {isEV ? '⚡ Şarj Dolum Kaydı' : '⛽ Yakıt Dolum Kaydı'}
               </Text>
 
-              {/* İstasyon / Marka Seçimi */}
               <Text style={styles.fieldLabel}>{isEV ? 'Şarj İstasyonu / Ağı:' : 'Akaryakıt İstasyonu:'}</Text>
               <View style={styles.stationChipsRow}>
                 {(isEV ? EV_STATIONS : FUEL_STATIONS).map((st) => {
@@ -305,7 +334,6 @@ export const FuelScreen = () => {
                 })}
               </View>
 
-              {/* EV ise Şarj Tipi Seçimi */}
               {isEV && (
                 <View style={{ marginBottom: SPACING.xs }}>
                   <Text style={styles.fieldLabel}>Şarj Tipi:</Text>
@@ -575,6 +603,7 @@ const styles = StyleSheet.create({
   },
   priceCol: {
     alignItems: 'flex-end',
+    marginLeft: 6,
   },
   totalPriceText: {
     fontSize: 16,
@@ -585,6 +614,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSecondary,
     marginTop: 2,
+  },
+  deleteBtn: {
+    padding: 6,
+    marginLeft: 8,
   },
   divider: {
     height: 1,
