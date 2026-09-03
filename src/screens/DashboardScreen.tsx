@@ -25,10 +25,10 @@ import {
 } from '../services/storageService';
 import { Vehicle, FuelEntry, ServiceRecord } from '../types/vehicle';
 
-const FUEL_TYPE_LABELS = {
+const FUEL_TYPE_LABELS: Record<Vehicle['fuelType'], string> = {
   gasoline: 'Benzin',
   diesel: 'Dizel',
-  lpg: 'LPG / Otogaz',
+  gasoline_lpg: 'Benzin / LPG',
   electric: 'Elektrik',
   hybrid: 'Hibrit',
 };
@@ -45,7 +45,7 @@ export const DashboardScreen = ({ navigation }: any) => {
   const [isSwitchModalVisible, setIsSwitchModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
-  // Yeni Araç Formu State
+  // Yeni Araç Form State
   const [plate, setPlate] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
@@ -73,7 +73,6 @@ export const DashboardScreen = ({ navigation }: any) => {
       setAvgConsumption(calculateAverageConsumption(fuels));
 
       const services = await getServiceRecords(current.id);
-      // Gelecek KM'si olan ilk bakımı bul
       const upcoming = services.find((s) => s.nextDueOdo && s.nextDueOdo > current.currentOdo);
       setNextService(upcoming || null);
     } else {
@@ -369,7 +368,7 @@ export const DashboardScreen = ({ navigation }: any) => {
 
               <Text style={styles.fieldLabel}>Yakıt Türü:</Text>
               <View style={styles.fuelChipRow}>
-                {(['gasoline', 'diesel', 'lpg', 'hybrid', 'electric'] as const).map((t) => {
+                {(['gasoline', 'diesel', 'gasoline_lpg', 'hybrid', 'electric'] as const).map((t) => {
                   const isSel = fuelType === t;
                   return (
                     <TouchableOpacity

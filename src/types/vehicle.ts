@@ -2,33 +2,33 @@
 
 export interface Vehicle {
   id: string;
-  plate: string;          // Örn: 34 ABC 123
-  brand: string;          // Örn: Renault
-  model: string;          // Örn: Megane
-  year: number;           // Örn: 2020
-  fuelType: 'gasoline' | 'diesel' | 'lpg' | 'electric' | 'hybrid';
-  currentOdo: number;     // Güncel KM
+  plate: string;
+  brand: string;
+  model: string;
+  year: number;
+  fuelType: 'gasoline' | 'diesel' | 'gasoline_lpg' | 'electric' | 'hybrid';
+  currentOdo: number;
 }
 
 export interface FuelEntry {
   id: string;
   vehicleId: string;
-  date: string;           // YYYY-MM-DD
-  odometer: number;       // Alım anındaki KM
-  liters: number;         // Alınan litre
-  totalPrice: number;     // Toplam ödenen (TL)
-  pricePerLiter: number;  // Birim fiyat
-  isFullTank: boolean;    // Depo tam dolduruldu mu?
+  date: string;
+  odometer: number;
+  liters: number;
+  totalPrice: number;
+  pricePerLiter: number;
+  isFullTank: boolean;
 }
 
 export interface ServiceRecord {
   id: string;
   vehicleId: string;
-  title: string;          // Örn: Periyodik Bakım (Yağ + Filtreler)
-  date: string;           // YYYY-MM-DD
-  odometer: number;       // Bakım anındaki KM
-  cost: number;           // Maliyet (TL)
-  nextDueOdo?: number;    // Sonraki bakım KM'si (Örn: +15.000 KM)
-  nextDueDate?: string;   // Sonraki bakım tarihi
+  title: string;
+  date: string;
+  odometer: number;
+  cost: number;
+  nextDueOdo?: number;
+  nextDueDate?: string;
   notes?: string;
 }
