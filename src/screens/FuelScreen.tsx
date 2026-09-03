@@ -165,16 +165,26 @@ export const FuelScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
+      {/* Yenilenmiş Kompakt Header */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={styles.title}>{isEV ? 'Şarj Günlüğü' : 'Yakıt Günlüğü'}</Text>
-          <Text style={styles.subtitle}>
-            {vehicle ? `${vehicle.plate} • ${vehicle.brand} ${vehicle.model}` : 'Araç Seçilmedi'}
-          </Text>
+          {vehicle && (
+            <View style={styles.vehicleBadge}>
+              <Ionicons
+                name={isEV ? 'flash' : 'car-sport'}
+                size={12}
+                color={isEV ? '#059669' : COLORS.primary}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={styles.vehicleBadgeText}>{vehicle.plate}</Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity
           style={[styles.quickAddBtn, isEV && { backgroundColor: '#059669' }]}
           onPress={openAddModal}
+          activeOpacity={0.8}
         >
           <Ionicons name={isEV ? 'flash' : 'add'} size={16} color="#FFFFFF" />
           <Text style={styles.quickAddBtnText}>{isEV ? 'Şarj Ekle' : 'Yakıt Gir'}</Text>
@@ -248,7 +258,6 @@ export const FuelScreen = () => {
                       {item.pricePerLiter.toFixed(2)} {isEV ? '₺/kWh' : '₺/L'}
                     </Text>
                   </View>
-                  {/* Silme Butonu */}
                   <TouchableOpacity
                     style={styles.deleteBtn}
                     onPress={() => handleDeleteEntry(item.id)}
@@ -467,17 +476,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xs + 4,
+    paddingBottom: SPACING.sm,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   title: {
     fontSize: 20,
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
-  subtitle: {
-    fontSize: 12,
+  vehicleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  vehicleBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
     color: COLORS.textSecondary,
-    marginTop: 1,
   },
   quickAddBtn: {
     flexDirection: 'row',

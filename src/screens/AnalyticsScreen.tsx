@@ -52,7 +52,6 @@ export const AnalyticsScreen = () => {
     }
   };
 
-  // Tüketim Trendi (LineChart)
   const getConsumptionChartData = () => {
     const fullTanks = fuelEntries
       .filter((e) => e.isFullTank)
@@ -81,7 +80,6 @@ export const AnalyticsScreen = () => {
     return dataPoints;
   };
 
-  // Harcama Özeti (BarChart)
   const totalFuelCost = fuelEntries.reduce((sum, f) => sum + f.totalPrice, 0);
   const totalServiceCost = serviceRecords.reduce((sum, s) => sum + s.cost, 0);
   const grandTotalCost = totalFuelCost + totalServiceCost;
@@ -109,11 +107,20 @@ export const AnalyticsScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
+      {/* Sade ve Kompakt Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Tüketim Analizi & Grafikler</Text>
-        <Text style={styles.subtitle}>
-          {vehicle ? `${vehicle.plate} • ${vehicle.brand} ${vehicle.model}` : 'Araç Seçilmedi'}
-        </Text>
+        <Text style={styles.title}>Tüketim Analizi</Text>
+        {vehicle && (
+          <View style={styles.vehicleBadge}>
+            <Ionicons
+              name={isEV ? 'flash' : 'car-sport'}
+              size={12}
+              color={isEV ? '#059669' : COLORS.primary}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={styles.vehicleBadgeText}>{vehicle.plate}</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView
@@ -238,18 +245,31 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xs + 4,
+    paddingBottom: SPACING.sm,
   },
   title: {
     fontSize: 20,
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
-  subtitle: {
-    fontSize: 12,
+  vehicleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  vehicleBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
     color: COLORS.textSecondary,
-    marginTop: 1,
   },
   content: {
     paddingHorizontal: SPACING.md,

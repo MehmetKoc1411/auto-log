@@ -184,19 +184,21 @@ export const ServiceScreen = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const totalSpent = services.reduce((sum, s) => sum + s.cost, 0);
-
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
+      {/* Yenilenmiş Kompakt Header */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={styles.title}>Bakım & Masraflar</Text>
-          <Text style={styles.subtitle}>
-            {vehicle ? `${vehicle.plate} • Toplam: ${totalSpent.toLocaleString('tr-TR')} ₺` : 'Araç Seçilmedi'}
-          </Text>
+          {vehicle && (
+            <View style={styles.vehicleBadge}>
+              <Ionicons name="car-sport" size={12} color={COLORS.primary} style={{ marginRight: 4 }} />
+              <Text style={styles.vehicleBadgeText}>{vehicle.plate}</Text>
+            </View>
+          )}
         </View>
-        <TouchableOpacity style={styles.quickAddBtn} onPress={openAddModal}>
-          <Ionicons name="add" size={18} color="#FFFFFF" />
+        <TouchableOpacity style={styles.quickAddBtn} onPress={openAddModal} activeOpacity={0.8}>
+          <Ionicons name="add" size={16} color="#FFFFFF" />
           <Text style={styles.quickAddBtnText}>İşlem Gir</Text>
         </TouchableOpacity>
       </View>
@@ -238,7 +240,6 @@ export const ServiceScreen = () => {
                     </Text>
                   </View>
                   <Text style={styles.cardCost}>{item.cost.toLocaleString('tr-TR')} ₺</Text>
-                  {/* Silme Butonu */}
                   <TouchableOpacity
                     style={styles.deleteBtn}
                     onPress={() => handleDeleteService(item.id)}
@@ -298,7 +299,7 @@ export const ServiceScreen = () => {
         )}
       </ScrollView>
 
-      {/* Yenilenmiş Bottom Sheet Tarzı Modal */}
+      {/* Bottom Sheet Modalı */}
       <Modal visible={isModalOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.sheetContainer}>
@@ -482,7 +483,7 @@ export const ServiceScreen = () => {
         </View>
       </Modal>
 
-      {/* Tarih Seçim Takvimi */}
+      {/* Takvim Modalı */}
       <DatePickerModal
         visible={isCalendarOpen}
         selectedDate={calendarTarget === 'service' ? serviceDate : nextDueDate || serviceDate}
@@ -509,17 +510,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xs + 4,
+    paddingBottom: SPACING.sm,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   title: {
     fontSize: 20,
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
-  subtitle: {
-    fontSize: 12,
+  vehicleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  vehicleBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
     color: COLORS.textSecondary,
-    marginTop: 1,
   },
   quickAddBtn: {
     flexDirection: 'row',
