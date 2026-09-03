@@ -23,13 +23,21 @@ import {
 import { Vehicle, ServiceRecord } from '../types/vehicle';
 import { DatePickerModal } from '../components/DatePickerModal';
 
-const SERVICE_TEMPLATES = [
-  { title: 'Periyodik Bakım (Yağ & Filtre)', defaultPlusKm: 15000, defaultPlusDays: 365 },
-  { title: 'TÜVTÜRK Araç Muayenesi', defaultPlusKm: 0, defaultPlusDays: 730 },
-  { title: 'Zorunlu Trafik Sigortası', defaultPlusKm: 0, defaultPlusDays: 365 },
-  { title: 'Kasko Poliçesi', defaultPlusKm: 0, defaultPlusDays: 365 },
-  { title: 'Ön / Arka Fren Balatası', defaultPlusKm: 30000, defaultPlusDays: 0 },
-  { title: 'Akü Değişimi', defaultPlusKm: 50000, defaultPlusDays: 730 },
+type ServiceCategory = 'maintenance' | 'legal';
+
+const TEMPLATES: {
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  category: ServiceCategory;
+  defaultPlusKm?: number;
+  defaultPlusDays?: number;
+}[] = [
+  { title: 'Periyodik Bakım', icon: 'construct', category: 'maintenance', defaultPlusKm: 15000 },
+  { title: 'Fren Balatası', icon: 'disc', category: 'maintenance', defaultPlusKm: 30000 },
+  { title: 'Akü Değişimi', icon: 'flash', category: 'maintenance', defaultPlusKm: 50000 },
+  { title: 'TÜVTÜRK Muayene', icon: 'shield-checkmark', category: 'legal', defaultPlusDays: 730 },
+  { title: 'Trafik Sigortası', icon: 'document-text', category: 'legal', defaultPlusDays: 365 },
+  { title: 'Kasko Poliçesi', icon: 'car', category: 'legal', defaultPlusDays: 365 },
 ];
 
 export const ServiceScreen = () => {
@@ -39,6 +47,7 @@ export const ServiceScreen = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form State
+  const [category, setCategory] = useState<ServiceCategory>('maintenance');
   const [title, setTitle] = useState('');
   const [odometer, setOdometer] = useState('');
   const [cost, setCost] = useState('');
@@ -79,30 +88,34 @@ export const ServiceScreen = () => {
     const today = new Date().toISOString().split('T')[0];
     setServiceDate(today);
     setNextDueDate('');
+    setCategory('maintenance');
     setOdometer(vehicle.currentOdo ? String(vehicle.currentOdo) : '');
-    setTitle('');
+    setTitle('Periyodik Bakım (Yağ & Filtre)');
     setCost('');
-    setNextDueOdo('');
+    setNextDueOdo(vehicle.currentOdo ? String(vehicle.currentOdo + 15000) : '');
     setNotes('');
     setIsModalOpen(true);
   };
 
-  const handleSelectTemplate = (tpl: typeof SERVICE_TEMPLATES[0]) => {
+  const handleSelectTemplate = (tpl: typeof TEMPLATES[0]) => {
     setTitle(tpl.title);
-    const currentKm = vehicle?.currentOdo || parseInt(odometer, 10) || 0;
-    if (tpl.defaultPlusKm > 0 && currentKm > 0) {
+    setCategory(tpl.category);
+    const currentKm = parseInt(odometer, 10) || vehicle?.currentOdo || 0;
+
+    if (tpl.category === 'maintenance' && tpl.defaultPlusKm) {
       setNextDueOdo(String(currentKm + tpl.defaultPlusKm));
-    } else {
+      setNextDueDate('');
+    } else if (tpl.category === 'legal' && tpl.defaultPlusDays) {
+      const target = new Date();
+      target.setDate(target.getDate() + tpl.defaultPlusDays);
+      setNextDueDate(target.toISOString().split('T')[0]);
       setNextDueOdo('');
     }
+  };
 
-    if (tpl.defaultPlusDays > 0) {
-      const targetDate = new Date();
-      targetDate.setDate(targetDate.getDate() + tpl.defaultPlusDays);
-      setNextDueDate(targetDate.toISOString().split('T')[0]);
-    } else {
-      setNextDueDate('');
-    }
+  const addKmOffset = (kmToAdd: number) => {
+    const baseKm = parseInt(odometer, 10) || vehicle?.currentOdo || 0;
+    setNextDueOdo(String(baseKm + kmToAdd));
   };
 
   const handleSaveService = async () => {
@@ -113,7 +126,7 @@ export const ServiceScreen = () => {
     const nextOdoNum = nextDueOdo.trim() ? parseInt(nextDueOdo.replace(/\D/g, ''), 10) : undefined;
 
     if (!title.trim() || isNaN(odoNum) || isNaN(costNum)) {
-      Alert.alert('Eksik Bilgi', 'Lütfen işlem adı, kilometre ve maliyet tutarını girin.');
+      Alert.alert('Eksik Bilgi', 'Lütfen işlem başlığı, kilometre ve maliyet tutarını eksiksiz girin.');
       return;
     }
 
@@ -124,8 +137,8 @@ export const ServiceScreen = () => {
       date: serviceDate,
       odometer: odoNum,
       cost: costNum,
-      nextDueOdo: nextOdoNum,
-      nextDueDate: nextDueDate.trim() || undefined,
+      nextDueOdo: category === 'maintenance' ? nextOdoNum : undefined,
+      nextDueDate: category === 'legal' ? nextDueDate.trim() || undefined : undefined,
       notes: notes.trim() || undefined,
     };
 
@@ -146,6 +159,7 @@ export const ServiceScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
+      {/* Üst Bar */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Bakım & Masraflar</Text>
@@ -170,7 +184,7 @@ export const ServiceScreen = () => {
             </View>
             <Text style={styles.emptyTitle}>Henüz Bakım Kaydı Yok</Text>
             <Text style={styles.emptySub}>
-              Yağ değişimi, muayene veya sigorta kayıtlarını ekleyerek araç geçmişini ve son günleri takip et.
+              Yağ değişimi, muayene veya sigorta kayıtlarını ekleyerek araç geçmişini takip et.
             </Text>
             <TouchableOpacity style={styles.emptyActionBtn} onPress={openAddModal}>
               <Text style={styles.emptyActionBtnText}>+ İlk Kaydı Ekle</Text>
@@ -183,7 +197,11 @@ export const ServiceScreen = () => {
               <View key={item.id} style={styles.serviceCard}>
                 <View style={styles.cardHeader}>
                   <View style={styles.iconBox}>
-                    <Ionicons name="build" size={16} color={COLORS.primary} />
+                    <Ionicons
+                      name={item.nextDueDate ? 'shield-checkmark' : 'construct'}
+                      size={16}
+                      color={COLORS.primary}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitle}>{item.title}</Text>
@@ -194,7 +212,6 @@ export const ServiceScreen = () => {
                   <Text style={styles.cardCost}>{item.cost.toLocaleString('tr-TR')} ₺</Text>
                 </View>
 
-                {/* Hedef KM ve Hedef Tarih Rozetleri */}
                 <View style={styles.badgesWrapper}>
                   {item.nextDueOdo && (
                     <View style={styles.nextDueBadge}>
@@ -203,7 +220,7 @@ export const ServiceScreen = () => {
                         Hedef: {item.nextDueOdo.toLocaleString('tr-TR')} km
                         {vehicle?.currentOdo && item.nextDueOdo > vehicle.currentOdo
                           ? ` (${(item.nextDueOdo - vehicle.currentOdo).toLocaleString('tr-TR')} km kaldı)`
-                          : ' (Süresi Geldi/Geçti)'}
+                          : ' (Süresi Geldi)'}
                       </Text>
                     </View>
                   )}
@@ -222,28 +239,17 @@ export const ServiceScreen = () => {
                       <Ionicons
                         name="calendar-outline"
                         size={13}
-                        color={
-                          daysLeft < 0 ? COLORS.danger : daysLeft <= 30 ? '#D97706' : COLORS.success
-                        }
+                        color={daysLeft < 0 ? COLORS.danger : daysLeft <= 30 ? '#D97706' : COLORS.success}
                         style={{ marginRight: 4 }}
                       />
                       <Text
                         style={[
                           styles.nextDueText,
-                          {
-                            color:
-                              daysLeft < 0
-                                ? COLORS.danger
-                                : daysLeft <= 30
-                                ? '#D97706'
-                                : COLORS.success,
-                          },
+                          { color: daysLeft < 0 ? COLORS.danger : daysLeft <= 30 ? '#D97706' : COLORS.success },
                         ]}
                       >
                         Bitiş: {item.nextDueDate}
-                        {daysLeft < 0
-                          ? ` (${Math.abs(daysLeft)} gün gecikti!)`
-                          : ` (${daysLeft} gün kaldı)`}
+                        {daysLeft < 0 ? ` (${Math.abs(daysLeft)} gün gecikti!)` : ` (${daysLeft} gün kaldı)`}
                       </Text>
                     </View>
                   )}
@@ -256,52 +262,98 @@ export const ServiceScreen = () => {
         )}
       </ScrollView>
 
-      {/* Kayıt Modalı */}
+      {/* Yenilenmiş Bottom Sheet Tarzı Modal */}
       <Modal visible={isModalOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '90%' }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalHeading}>🛠️ Yeni Bakım / Masraf Kaydı</Text>
+          <View style={styles.sheetContainer}>
+            {/* Tutma Çubuğu */}
+            <View style={styles.handleBar} />
 
-              <Text style={styles.fieldLabel}>Hızlı Şablon:</Text>
-              <View style={styles.templateGrid}>
-                {SERVICE_TEMPLATES.map((t, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[styles.templateChip, title === t.title && styles.selectedTemplateChip]}
-                    onPress={() => handleSelectTemplate(t)}
-                  >
-                    <Text style={[styles.templateChipText, title === t.title && styles.selectedTemplateChipText]}>
-                      {t.title}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Yeni Masraf / Bakım</Text>
+              <TouchableOpacity onPress={() => setIsModalOpen(false)}>
+                <Ionicons name="close-circle" size={24} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              {/* Kategori Seçici Sekmeler */}
+              <View style={styles.categoryTabs}>
+                <TouchableOpacity
+                  style={[styles.categoryTab, category === 'maintenance' && styles.categoryTabActive]}
+                  onPress={() => {
+                    setCategory('maintenance');
+                    setNextDueDate('');
+                  }}
+                >
+                  <Ionicons
+                    name="construct"
+                    size={15}
+                    color={category === 'maintenance' ? COLORS.primary : COLORS.textSecondary}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.categoryTabText, category === 'maintenance' && styles.categoryTabTextActive]}>
+                    Mekanik / Periyodik
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.categoryTab, category === 'legal' && styles.categoryTabActive]}
+                  onPress={() => {
+                    setCategory('legal');
+                    setNextDueOdo('');
+                  }}
+                >
+                  <Ionicons
+                    name="shield-checkmark"
+                    size={15}
+                    color={category === 'legal' ? COLORS.primary : COLORS.textSecondary}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.categoryTabText, category === 'legal' && styles.categoryTabTextActive]}>
+                    Muayene & Sigorta
+                  </Text>
+                </TouchableOpacity>
               </View>
 
-              <Text style={styles.fieldLabel}>Yapılan İşlem *</Text>
+              {/* Hızlı Şablonlar (Seçili Kategoriye Göre Filtreli) */}
+              <Text style={styles.fieldLabel}>Önerilen İşlem:</Text>
+              <View style={styles.templateRow}>
+                {TEMPLATES.filter((t) => t.category === category).map((t, idx) => {
+                  const isSel = title.startsWith(t.title);
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[styles.templatePill, isSel && styles.templatePillActive]}
+                      onPress={() => handleSelectTemplate(t)}
+                    >
+                      <Ionicons
+                        name={t.icon}
+                        size={14}
+                        color={isSel ? COLORS.primary : COLORS.textSecondary}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={[styles.templatePillText, isSel && styles.templatePillTextActive]}>
+                        {t.title}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* İşlem Adı */}
+              <Text style={styles.fieldLabel}>İşlem Başlığı *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Örn: Yağ Değişimi veya Muayene"
+                placeholder="Örn: 10.000 Bakımı veya Trafik Sigortası"
                 value={title}
                 onChangeText={setTitle}
               />
 
-              <Text style={styles.fieldLabel}>İşlem Tarihi:</Text>
-              <TouchableOpacity
-                style={styles.datePickerBtn}
-                onPress={() => {
-                  setCalendarTarget('service');
-                  setIsCalendarOpen(true);
-                }}
-              >
-                <Ionicons name="calendar-outline" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
-                <Text style={styles.datePickerBtnText}>{serviceDate}</Text>
-                <Text style={styles.changeText}>Değiştir</Text>
-              </TouchableOpacity>
-
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+              {/* Tarih & KM & Tutar Satırları */}
+              <View style={styles.formGridRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>İşlem KM'si *</Text>
+                  <Text style={styles.fieldLabel}>İşlem KM *</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="95000"
@@ -310,8 +362,9 @@ export const ServiceScreen = () => {
                     onChangeText={setOdometer}
                   />
                 </View>
+
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Maliyet Tutarı (₺) *</Text>
+                  <Text style={styles.fieldLabel}>Tutar (₺) *</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="3500"
@@ -322,47 +375,79 @@ export const ServiceScreen = () => {
                 </View>
               </View>
 
-              <Text style={styles.fieldLabel}>Sonraki Bakım Hedef KM'si (İsteğe Bağlı):</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Örn: 110000"
-                keyboardType="numeric"
-                value={nextDueOdo}
-                onChangeText={setNextDueOdo}
-              />
-
-              <Text style={styles.fieldLabel}>Poliçe / Muayene Bitiş Tarihi (Geri Sayım İçin):</Text>
+              {/* İşlem Tarihi */}
+              <Text style={styles.fieldLabel}>İşlem Tarihi:</Text>
               <TouchableOpacity
                 style={styles.datePickerBtn}
                 onPress={() => {
-                  setCalendarTarget('nextDue');
+                  setCalendarTarget('service');
                   setIsCalendarOpen(true);
                 }}
               >
-                <Ionicons name="alarm-outline" size={18} color={COLORS.secondary} style={{ marginRight: 8 }} />
-                <Text style={styles.datePickerBtnText}>
-                  {nextDueDate ? nextDueDate : 'Tarih Belirtilmedi'}
-                </Text>
-                <Text style={styles.changeText}>Seç</Text>
+                <Ionicons name="calendar-outline" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
+                <Text style={styles.datePickerBtnText}>{serviceDate}</Text>
+                <Text style={styles.changeText}>Takvimden Değiştir</Text>
               </TouchableOpacity>
 
-              <Text style={styles.fieldLabel}>Usta / Servis Notları (Opsiyonel):</Text>
+              {/* Kategoriye Özel Dinamik Hatırlatıcı Bölümü */}
+              {category === 'maintenance' ? (
+                /* MEKANİK BAKIM: Yalnızca Hedef KM ve Hızlı +10k / +15k Çipleri */
+                <View style={styles.targetSection}>
+                  <Text style={styles.fieldLabel}>Sonraki Bakım Hedef Kilometresi:</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Örn: 110000"
+                    keyboardType="numeric"
+                    value={nextDueOdo}
+                    onChangeText={setNextDueOdo}
+                  />
+                  <View style={styles.quickKmRow}>
+                    <Text style={styles.quickKmLabel}>Hızlı Ekle:</Text>
+                    <TouchableOpacity style={styles.quickKmChip} onPress={() => addKmOffset(10000)}>
+                      <Text style={styles.quickKmChipText}>+10.000 km</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.quickKmChip} onPress={() => addKmOffset(15000)}>
+                      <Text style={styles.quickKmChipText}>+15.000 km</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.quickKmChip} onPress={() => addKmOffset(20000)}>
+                      <Text style={styles.quickKmChipText}>+20.000 km</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                /* YASAL/POLİÇE: Yalnızca Bitiş / Geçerlilik Tarihi */
+                <View style={styles.targetSection}>
+                  <Text style={styles.fieldLabel}>Poliçe / Muayene Bitiş Tarihi (Geri Sayım):</Text>
+                  <TouchableOpacity
+                    style={styles.datePickerBtn}
+                    onPress={() => {
+                      setCalendarTarget('nextDue');
+                      setIsCalendarOpen(true);
+                    }}
+                  >
+                    <Ionicons name="alarm-outline" size={16} color={COLORS.secondary} style={{ marginRight: 8 }} />
+                    <Text style={styles.datePickerBtnText}>
+                      {nextDueDate ? nextDueDate : 'Tarih Seçilmedi (Dokun)'}
+                    </Text>
+                    <Text style={styles.changeText}>Seç</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Notlar */}
+              <Text style={styles.fieldLabel}>Usta / Servis Notları (Opsiyonel)</Text>
               <TextInput
-                style={[styles.input, { height: 60 }]}
-                placeholder="Castrol 5W-30 Edge kullanıldı, fren hidroliği kontrol edildi"
+                style={[styles.input, { height: 50 }]}
+                placeholder="Örn: Yağ ve filtreler değişti, rot-balans yapıldı."
                 value={notes}
                 onChangeText={setNotes}
-                multiline
               />
 
-              <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsModalOpen(false)}>
-                  <Text style={styles.cancelBtnText}>İptal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.saveBtn} onPress={handleSaveService}>
-                  <Text style={styles.saveBtnText}>Kaydet</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Kaydet Butonu */}
+              <TouchableOpacity style={styles.saveBtn} activeOpacity={0.85} onPress={handleSaveService}>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.saveBtnText}>Masrafı Kaydet</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -536,65 +621,119 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
+
+  /* Bottom Sheet Stilleri */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
-    justifyContent: 'center',
-    padding: SPACING.md,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'flex-end',
   },
-  modalContent: {
-    backgroundColor: COLORS.card,
-    borderRadius: 22,
-    padding: SPACING.lg,
+  sheetContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: 12,
+    maxHeight: '88%',
   },
-  modalHeading: {
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  modalTitle: {
     fontSize: 17,
     fontWeight: '800',
     color: COLORS.textPrimary,
+  },
+  categoryTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 3,
     marginBottom: SPACING.sm,
+  },
+  categoryTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  categoryTabActive: {
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  categoryTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  categoryTabTextActive: {
+    color: COLORS.primary,
+    fontWeight: '800',
   },
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
+    marginTop: 8,
     marginBottom: 6,
   },
-  templateGrid: {
+  templateRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
     marginBottom: SPACING.xs,
   },
-  templateChip: {
+  templatePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.background,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  selectedTemplateChip: {
+  templatePillActive: {
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
   },
-  templateChipText: {
+  templatePillText: {
     fontSize: 11,
-    color: COLORS.textSecondary,
     fontWeight: '600',
+    color: COLORS.textSecondary,
   },
-  selectedTemplateChipText: {
+  templatePillTextActive: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  formGridRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 12,
-    padding: 12,
+    padding: 11,
     fontSize: 13,
     backgroundColor: COLORS.background,
-    marginBottom: SPACING.xs,
+    color: COLORS.textPrimary,
   },
   datePickerBtn: {
     flexDirection: 'row',
@@ -603,8 +742,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 12,
-    padding: 12,
-    marginBottom: SPACING.xs,
+    padding: 11,
   },
   datePickerBtnText: {
     flex: 1,
@@ -617,31 +755,50 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
-  modalActions: {
+  targetSection: {
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 10,
+  },
+  quickKmRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: SPACING.md,
-  },
-  cancelBtn: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 12,
-    borderRadius: 12,
     alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
   },
-  cancelBtnText: {
-    color: COLORS.textSecondary,
+  quickKmLabel: {
+    fontSize: 10,
+    color: COLORS.textLight,
+    fontWeight: '600',
+  },
+  quickKmChip: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  quickKmChipText: {
+    fontSize: 10,
     fontWeight: '700',
+    color: COLORS.primary,
   },
   saveBtn: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 13,
+    borderRadius: 14,
+    marginTop: SPACING.md,
   },
   saveBtnText: {
     color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '700',
   },
 });
