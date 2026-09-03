@@ -14,11 +14,12 @@ export interface FuelEntry {
   vehicleId: string;
   date: string;
   odometer: number;
-  liters: number;           // Elektrikli araçlarda kWh değerini tutar
-  totalPrice: number;       // Toplam harcama (₺)
-  pricePerLiter: number;    // ₺/L veya ₺/kWh
-  isFullTank: boolean;      // Tam dolum / %100 Şarj
-  chargeType?: 'AC' | 'DC'; // Elektrikli araçlar için şarj tipi
+  liters: number;
+  totalPrice: number;
+  pricePerLiter: number;
+  isFullTank: boolean;
+  chargeType?: 'AC' | 'DC';
+  station?: string; // İstasyon / Şarj Ağı Markası
 }
 
 export interface ServiceRecord {

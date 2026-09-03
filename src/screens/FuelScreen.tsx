@@ -24,6 +24,9 @@ import {
 import { Vehicle, FuelEntry } from '../types/vehicle';
 import { DatePickerModal } from '../components/DatePickerModal';
 
+const FUEL_STATIONS = ['Shell', 'Opet', 'Petrol Ofisi', 'BP', 'TotalEnergies', 'Aytemiz', 'Diğer'];
+const EV_STATIONS = ['ZES', 'Trugo', 'Eşarj', 'Tesla Supercharger', 'Voltrun', 'Evde Şarj (AC)', 'Diğer'];
+
 export const FuelScreen = () => {
   const insets = useSafeAreaInsets();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -32,10 +35,11 @@ export const FuelScreen = () => {
 
   // Form State
   const [odometer, setOdometer] = useState('');
-  const [amount, setAmount] = useState(''); // Litre veya kWh
+  const [amount, setAmount] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
   const [isFullTank, setIsFullTank] = useState(true);
   const [chargeType, setChargeType] = useState<'AC' | 'DC'>('AC');
+  const [selectedStation, setSelectedStation] = useState<string>('Shell');
 
   // Tarih State
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -74,6 +78,7 @@ export const FuelScreen = () => {
     setTotalPrice('');
     setIsFullTank(true);
     setChargeType('AC');
+    setSelectedStation(vehicle.fuelType === 'electric' ? 'ZES' : 'Shell');
     setIsModalOpen(true);
   };
 
@@ -104,11 +109,12 @@ export const FuelScreen = () => {
       vehicleId: vehicle.id,
       date,
       odometer: odoNum,
-      liters: amountNum, // EV ise kWh değeri burada tutulur
+      liters: amountNum,
       totalPrice: priceNum,
       pricePerLiter: unitPrice,
       isFullTank,
       chargeType: isEV ? chargeType : undefined,
+      station: selectedStation,
     };
 
     const updated = await addFuelEntry(newEntry);
@@ -137,7 +143,6 @@ export const FuelScreen = () => {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
-      {/* Üst Başlık */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>{isEV ? 'Şarj Günlüğü' : 'Yakıt Günlüğü'}</Text>
@@ -160,12 +165,7 @@ export const FuelScreen = () => {
       >
         {entries.length === 0 ? (
           <View style={styles.emptyCard}>
-            <View
-              style={[
-                styles.emptyIconCircle,
-                isEV && { backgroundColor: '#D1FAE5' },
-              ]}
-            >
+            <View style={[styles.emptyIconCircle, isEV && { backgroundColor: '#D1FAE5' }]}>
               <Ionicons
                 name={isEV ? 'flash-outline' : 'funnel-outline'}
                 size={32}
@@ -177,8 +177,8 @@ export const FuelScreen = () => {
             </Text>
             <Text style={styles.emptySub}>
               {isEV
-                ? 'Aracını şarj ettiğinde alınan kWh ve harcama bilgisini girerek tüketim ortalamanı gör.'
-                : 'Depoyu doldurduğunda fiş bilgilerini kaydederek tüketim ortalamanı hesapla.'}
+                ? 'Aracını şarj ettiğinde alınan kWh, istasyon ve harcama bilgisini kaydet.'
+                : 'Depoyu doldurduğunda istasyon ve fiş bilgilerini kaydederek tüketim ortalamanı hesapla.'}
             </Text>
             <TouchableOpacity
               style={[styles.emptyActionBtn, isEV && { backgroundColor: '#059669' }]}
@@ -195,12 +195,7 @@ export const FuelScreen = () => {
             return (
               <View key={item.id} style={styles.fuelCard}>
                 <View style={styles.cardTopRow}>
-                  <View
-                    style={[
-                      styles.fuelIconBadge,
-                      isEV && { backgroundColor: '#ECFDF5' },
-                    ]}
-                  >
+                  <View style={[styles.fuelIconBadge, isEV && { backgroundColor: '#ECFDF5' }]}>
                     <Ionicons
                       name={isEV ? 'flash' : 'funnel'}
                       size={16}
@@ -208,8 +203,13 @@ export const FuelScreen = () => {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <Text style={styles.cardOdo}>{item.odometer.toLocaleString('tr-TR')} km</Text>
+                      {item.station && (
+                        <View style={styles.stationBadge}>
+                          <Text style={styles.stationBadgeText}>{item.station}</Text>
+                        </View>
+                      )}
                       {item.chargeType && (
                         <View style={[styles.chargeTypePill, item.chargeType === 'DC' && styles.dcPill]}>
                           <Text style={[styles.chargeTypeText, item.chargeType === 'DC' && styles.dcText]}>
@@ -246,7 +246,7 @@ export const FuelScreen = () => {
                         { color: item.isFullTank ? COLORS.success : COLORS.textSecondary },
                       ]}
                     >
-                      {item.isFullTank ? (isEV ? '%100 Şarj ✅' : 'Full Dolum ✅') : 'Kısmi Dolum'}
+                      {item.isFullTank ? (isEV ? '%100 Şarj ✅' : 'Full Dolum ✅') : 'Kısmi'}
                     </Text>
                   </View>
 
@@ -278,7 +278,34 @@ export const FuelScreen = () => {
                 {isEV ? '⚡ Şarj Dolum Kaydı' : '⛽ Yakıt Dolum Kaydı'}
               </Text>
 
-              {/* EV ise Şarj İstasyonu Tipi Seçimi */}
+              {/* İstasyon / Marka Seçimi */}
+              <Text style={styles.fieldLabel}>{isEV ? 'Şarj İstasyonu / Ağı:' : 'Akaryakıt İstasyonu:'}</Text>
+              <View style={styles.stationChipsRow}>
+                {(isEV ? EV_STATIONS : FUEL_STATIONS).map((st) => {
+                  const isSel = selectedStation === st;
+                  return (
+                    <TouchableOpacity
+                      key={st}
+                      style={[
+                        styles.stationChip,
+                        isSel && (isEV ? styles.selectedEVChip : styles.selectedStationChip),
+                      ]}
+                      onPress={() => setSelectedStation(st)}
+                    >
+                      <Text
+                        style={[
+                          styles.stationChipText,
+                          isSel && (isEV ? styles.selectedEVChipText : styles.selectedStationChipText),
+                        ]}
+                      >
+                        {st}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* EV ise Şarj Tipi Seçimi */}
               {isEV && (
                 <View style={{ marginBottom: SPACING.xs }}>
                   <Text style={styles.fieldLabel}>Şarj Tipi:</Text>
@@ -316,7 +343,7 @@ export const FuelScreen = () => {
               <Text style={styles.fieldLabel}>Kilometre Göstergesi *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Örn: 42000"
+                placeholder="Örn: 95400"
                 keyboardType="numeric"
                 value={odometer}
                 onChangeText={setOdometer}
@@ -338,7 +365,7 @@ export const FuelScreen = () => {
                   <Text style={styles.fieldLabel}>Ödenen Tutar (₺) *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="450"
+                    placeholder="2100"
                     keyboardType="numeric"
                     value={totalPrice}
                     onChangeText={setTotalPrice}
@@ -391,7 +418,7 @@ export const FuelScreen = () => {
         </View>
       </Modal>
 
-      {/* Tarih Seçim Takvimi */}
+      {/* Takvim Modalı */}
       <DatePickerModal
         visible={isCalendarOpen}
         selectedDate={date}
@@ -511,6 +538,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
+  stationBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  stationBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
   chargeTypePill: {
     backgroundColor: '#E0E7FF',
     paddingHorizontal: 6,
@@ -613,6 +653,48 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginBottom: SPACING.sm,
   },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+    marginBottom: 6,
+  },
+  stationChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: SPACING.xs,
+  },
+  stationChip: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  selectedStationChip: {
+    backgroundColor: COLORS.secondaryLight,
+    borderColor: COLORS.secondary,
+  },
+  selectedEVChip: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#059669',
+  },
+  stationChipText: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  selectedStationChipText: {
+    color: COLORS.secondary,
+    fontWeight: '800',
+  },
+  selectedEVChipText: {
+    color: '#059669',
+    fontWeight: '800',
+  },
   chargeTypeSelector: {
     flexDirection: 'row',
     gap: 8,
@@ -639,13 +721,6 @@ const styles = StyleSheet.create({
   chargeTypeBtnTextActive: {
     color: '#059669',
     fontWeight: '800',
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-    marginBottom: 6,
   },
   datePickerBtn: {
     flexDirection: 'row',
