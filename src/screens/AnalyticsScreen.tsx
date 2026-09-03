@@ -24,6 +24,9 @@ export const AnalyticsScreen = () => {
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
   const [avgConsumption, setAvgConsumption] = useState<number | null>(null);
 
+  const isEV = vehicle?.fuelType === 'electric';
+  const unitLabel = isEV ? 'kWh' : 'L';
+
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -49,7 +52,7 @@ export const AnalyticsScreen = () => {
     }
   };
 
-  // Tüketim Trendi (LineChart) Verisi Hazırlama
+  // Tüketim Trendi (LineChart)
   const getConsumptionChartData = () => {
     const fullTanks = fuelEntries
       .filter((e) => e.isFullTank)
@@ -86,8 +89,8 @@ export const AnalyticsScreen = () => {
   const costComparisonData = [
     {
       value: totalFuelCost,
-      label: 'Yakıt',
-      frontColor: COLORS.secondary,
+      label: isEV ? 'Şarj' : 'Yakıt',
+      frontColor: isEV ? '#059669' : COLORS.secondary,
       topLabelComponent: () => (
         <Text style={styles.barTopLabel}>{totalFuelCost.toLocaleString('tr-TR')} ₺</Text>
       ),
@@ -132,12 +135,17 @@ export const AnalyticsScreen = () => {
                 <Text style={styles.summaryValue}>
                   {avgConsumption ? `${avgConsumption}` : '- -'}
                 </Text>
-                <Text style={styles.summarySub}>L / 100 km</Text>
+                <Text style={styles.summarySub}>{unitLabel} / 100 km</Text>
               </View>
 
               <View style={styles.summaryBox}>
-                <Text style={styles.summaryLabel}>Yakıt Masrafı</Text>
-                <Text style={[styles.summaryValue, { color: COLORS.secondary }]}>
+                <Text style={styles.summaryLabel}>{isEV ? 'Şarj Masrafı' : 'Yakıt Masrafı'}</Text>
+                <Text
+                  style={[
+                    styles.summaryValue,
+                    { color: isEV ? '#059669' : COLORS.secondary },
+                  ]}
+                >
                   {totalFuelCost.toLocaleString('tr-TR')}
                 </Text>
                 <Text style={styles.summarySub}>TL Toplam</Text>
@@ -148,27 +156,29 @@ export const AnalyticsScreen = () => {
                 <Text style={[styles.summaryValue, { color: COLORS.primary }]}>
                   {grandTotalCost.toLocaleString('tr-TR')}
                 </Text>
-                <Text style={styles.summarySub}>Yakıt + Servis</Text>
+                <Text style={styles.summarySub}>{isEV ? 'Şarj + Servis' : 'Yakıt + Servis'}</Text>
               </View>
             </View>
 
             {/* Tüketim Çizgi Grafiği */}
-            <Text style={styles.sectionHeading}>Tüketim Trendi (L / 100 km)</Text>
+            <Text style={styles.sectionHeading}>
+              Tüketim Trendi ({unitLabel} / 100 km)
+            </Text>
             <View style={styles.chartCard}>
               {consumptionData.length >= 1 ? (
                 <LineChart
                   data={consumptionData}
                   width={SCREEN_WIDTH - 80}
                   height={190}
-                  color={COLORS.primary}
+                  color={isEV ? '#059669' : COLORS.primary}
                   thickness={3}
-                  startFillColor="rgba(2, 132, 199, 0.25)"
-                  endFillColor="rgba(2, 132, 199, 0.01)"
+                  startFillColor={isEV ? 'rgba(5, 150, 105, 0.25)' : 'rgba(2, 132, 199, 0.25)'}
+                  endFillColor={isEV ? 'rgba(5, 150, 105, 0.01)' : 'rgba(2, 132, 199, 0.01)'}
                   areaChart
                   isAnimated
                   textColor1={COLORS.textPrimary}
                   textFontSize1={11}
-                  dataPointsColor={COLORS.primary}
+                  dataPointsColor={isEV ? '#059669' : COLORS.primary}
                   dataPointsRadius={5}
                   xAxisColor={COLORS.border}
                   yAxisColor={COLORS.border}
@@ -180,7 +190,7 @@ export const AnalyticsScreen = () => {
                 <View style={styles.chartEmptyNotice}>
                   <Ionicons name="information-circle-outline" size={24} color={COLORS.textLight} />
                   <Text style={styles.chartEmptyText}>
-                    Trend grafiğinin oluşması için en az 2 adet "Full Dolum" yakıt girişi gereklidir.
+                    Trend grafiğinin oluşması için en az 2 adet {isEV ? '"%100 Şarj"' : '"Full Dolum"'} kaydı gereklidir.
                   </Text>
                 </View>
               )}
@@ -209,7 +219,9 @@ export const AnalyticsScreen = () => {
               ) : (
                 <View style={styles.chartEmptyNotice}>
                   <Ionicons name="receipt-outline" size={24} color={COLORS.textLight} />
-                  <Text style={styles.chartEmptyText}>Henüz kaydedilmiş yakıt veya servis masrafı bulunmuyor.</Text>
+                  <Text style={styles.chartEmptyText}>
+                    Henüz kaydedilmiş {isEV ? 'şarj' : 'yakıt'} veya servis masrafı bulunmuyor.
+                  </Text>
                 </View>
               )}
             </View>

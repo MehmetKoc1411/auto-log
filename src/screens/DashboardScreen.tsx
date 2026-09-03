@@ -53,6 +53,8 @@ export const DashboardScreen = ({ navigation }: any) => {
   const [currentOdo, setCurrentOdo] = useState('');
   const [fuelType, setFuelType] = useState<Vehicle['fuelType']>('gasoline');
 
+  const isEV = vehicle?.fuelType === 'electric';
+
   useFocusEffect(
     useCallback(() => {
       loadDashboard();
@@ -126,7 +128,12 @@ export const DashboardScreen = ({ navigation }: any) => {
             style={styles.vehicleSwitchBadge}
             onPress={() => setIsSwitchModalVisible(true)}
           >
-            <Ionicons name="car-sport" size={14} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Ionicons
+              name={isEV ? 'flash' : 'car-sport'}
+              size={14}
+              color={isEV ? '#059669' : COLORS.primary}
+              style={{ marginRight: 6 }}
+            />
             <Text style={styles.plateText}>{vehicle.plate}</Text>
             <Ionicons name="chevron-down" size={14} color={COLORS.primary} style={{ marginLeft: 4 }} />
           </TouchableOpacity>
@@ -138,7 +145,6 @@ export const DashboardScreen = ({ navigation }: any) => {
         showsVerticalScrollIndicator={false}
       >
         {!vehicle ? (
-          /* Araç Yoksa Boş Durum Kartı */
           <View style={styles.emptyHeroCard}>
             <View style={styles.emptyIconCircle}>
               <Ionicons name="car-sport-outline" size={36} color={COLORS.primary} />
@@ -158,7 +164,7 @@ export const DashboardScreen = ({ navigation }: any) => {
           </View>
         ) : (
           <>
-            {/* Ana Araç Bilgi Kartı */}
+            {/* Ana Araç Kartı */}
             <View style={styles.mainVehicleCard}>
               <View style={styles.vehicleHeaderRow}>
                 <View>
@@ -182,23 +188,41 @@ export const DashboardScreen = ({ navigation }: any) => {
             <Text style={styles.sectionHeading}>Verimlilik & Tüketim</Text>
             <View style={styles.metricsGrid}>
               <View style={styles.metricCard}>
-                <View style={[styles.metricIconBox, { backgroundColor: COLORS.primaryLight }]}>
-                  <Ionicons name="speedometer-outline" size={20} color={COLORS.primary} />
+                <View
+                  style={[
+                    styles.metricIconBox,
+                    { backgroundColor: isEV ? '#ECFDF5' : COLORS.primaryLight },
+                  ]}
+                >
+                  <Ionicons
+                    name={isEV ? 'flash' : 'speedometer-outline'}
+                    size={20}
+                    color={isEV ? '#059669' : COLORS.primary}
+                  />
                 </View>
                 <Text style={styles.metricLabel}>Ort. Tüketim</Text>
                 <Text style={styles.metricValue}>
-                  {avgConsumption ? `${avgConsumption} L` : '- -'}
+                  {avgConsumption ? `${avgConsumption} ${isEV ? 'kWh' : 'L'}` : '- -'}
                 </Text>
                 <Text style={styles.metricSub}>/100 km</Text>
               </View>
 
               <View style={styles.metricCard}>
-                <View style={[styles.metricIconBox, { backgroundColor: COLORS.secondaryLight }]}>
-                  <Ionicons name="flame-outline" size={20} color={COLORS.secondary} />
+                <View
+                  style={[
+                    styles.metricIconBox,
+                    { backgroundColor: isEV ? '#E0E7FF' : COLORS.secondaryLight },
+                  ]}
+                >
+                  <Ionicons
+                    name={isEV ? 'battery-charging' : 'flame-outline'}
+                    size={20}
+                    color={isEV ? COLORS.primary : COLORS.secondary}
+                  />
                 </View>
-                <Text style={styles.metricLabel}>Son Yakıt</Text>
+                <Text style={styles.metricLabel}>{isEV ? 'Son Şarj' : 'Son Yakıt'}</Text>
                 <Text style={styles.metricValue}>
-                  {lastFuel ? `${lastFuel.liters} L` : '- -'}
+                  {lastFuel ? `${lastFuel.liters} ${isEV ? 'kWh' : 'L'}` : '- -'}
                 </Text>
                 <Text style={styles.metricSub}>
                   {lastFuel ? `${lastFuel.totalPrice.toFixed(0)} ₺` : 'Kayıt Yok'}
@@ -210,15 +234,29 @@ export const DashboardScreen = ({ navigation }: any) => {
             <Text style={styles.sectionHeading}>Hızlı Kayıt</Text>
             <View style={styles.actionRow}>
               <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: '#F0FDF4' }]}
+                style={[
+                  styles.actionBtn,
+                  { backgroundColor: isEV ? '#ECFDF5' : '#F0FDF4' },
+                ]}
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('FuelTab')}
               >
-                <View style={[styles.actionIconCircle, { backgroundColor: '#DCFCE7' }]}>
-                  <Ionicons name="funnel" size={20} color={COLORS.success} />
+                <View
+                  style={[
+                    styles.actionIconCircle,
+                    { backgroundColor: isEV ? '#D1FAE5' : '#DCFCE7' },
+                  ]}
+                >
+                  <Ionicons
+                    name={isEV ? 'flash' : 'funnel'}
+                    size={20}
+                    color={isEV ? '#059669' : COLORS.success}
+                  />
                 </View>
-                <Text style={styles.actionBtnTitle}>Yakıt Ekle</Text>
-                <Text style={styles.actionBtnSub}>Depo Dolumu Gir</Text>
+                <Text style={styles.actionBtnTitle}>{isEV ? 'Şarj Ekle' : 'Yakıt Ekle'}</Text>
+                <Text style={styles.actionBtnSub}>
+                  {isEV ? 'kWh / Batarya Dolumu' : 'Depo Dolumu Gir'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -254,7 +292,12 @@ export const DashboardScreen = ({ navigation }: any) => {
               </View>
             ) : (
               <View style={styles.emptyServiceCard}>
-                <Ionicons name="checkmark-done-circle-outline" size={20} color={COLORS.success} style={{ marginRight: 8 }} />
+                <Ionicons
+                  name="checkmark-done-circle-outline"
+                  size={20}
+                  color={COLORS.success}
+                  style={{ marginRight: 8 }}
+                />
                 <Text style={styles.emptyServiceText}>Gecikmiş veya acil bir servis kaydı yok.</Text>
               </View>
             )}
@@ -262,29 +305,52 @@ export const DashboardScreen = ({ navigation }: any) => {
         )}
       </ScrollView>
 
-      {/* Araç Seçim Modalı */}
+      {/* Araç Değiştirme Modalı */}
       <Modal visible={isSwitchModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalHeading}>Garajdaki Araçlar</Text>
             {vehicles.map((v) => {
               const isSelected = v.id === vehicle?.id;
+              const isVehicleEV = v.fuelType === 'electric';
               return (
                 <TouchableOpacity
                   key={v.id}
                   style={[styles.vehicleRow, isSelected && styles.selectedVehicleRow]}
                   onPress={() => handleSelectVehicle(v)}
                 >
-                  <Ionicons name="car-sport" size={20} color={isSelected ? COLORS.primary : COLORS.textSecondary} style={{ marginRight: 12 }} />
+                  <Ionicons
+                    name={isVehicleEV ? 'flash' : 'car-sport'}
+                    size={20}
+                    color={
+                      isSelected
+                        ? isVehicleEV
+                          ? '#059669'
+                          : COLORS.primary
+                        : COLORS.textSecondary
+                    }
+                    style={{ marginRight: 12 }}
+                  />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.vehiclePlate, isSelected && { color: COLORS.primary }]}>
+                    <Text
+                      style={[
+                        styles.vehiclePlate,
+                        isSelected && { color: isVehicleEV ? '#059669' : COLORS.primary },
+                      ]}
+                    >
                       {v.plate}
                     </Text>
                     <Text style={styles.vehicleSub}>
                       {v.brand} {v.model} • {v.currentOdo.toLocaleString('tr-TR')} km
                     </Text>
                   </View>
-                  {isSelected && <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />}
+                  {isSelected && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={isVehicleEV ? '#059669' : COLORS.primary}
+                    />
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -327,7 +393,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                   <Text style={styles.fieldLabel}>Marka *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Renault"
+                    placeholder="Renault / Tesla"
                     value={brand}
                     onChangeText={setBrand}
                   />
@@ -336,7 +402,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                   <Text style={styles.fieldLabel}>Model *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Megane"
+                    placeholder="Megane / Model Y"
                     value={model}
                     onChangeText={setModel}
                   />
@@ -348,7 +414,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                   <Text style={styles.fieldLabel}>Model Yılı</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="2020"
+                    placeholder="2022"
                     keyboardType="numeric"
                     value={year}
                     onChangeText={setYear}
@@ -366,7 +432,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                 </View>
               </View>
 
-              <Text style={styles.fieldLabel}>Yakıt Türü:</Text>
+              <Text style={styles.fieldLabel}>Yakıt / Güç Türü:</Text>
               <View style={styles.fuelChipRow}>
                 {(['gasoline', 'diesel', 'gasoline_lpg', 'hybrid', 'electric'] as const).map((t) => {
                   const isSel = fuelType === t;
@@ -561,7 +627,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   metricValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: COLORS.textPrimary,
     marginTop: 2,
