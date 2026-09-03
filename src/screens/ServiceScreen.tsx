@@ -32,11 +32,21 @@ const TEMPLATES: {
   defaultPlusKm?: number;
   defaultPlusDays?: number;
 }[] = [
-  { title: 'Periyodik Bakım', icon: 'construct', category: 'maintenance', defaultPlusKm: 15000 },
-  { title: 'Fren Balatası', icon: 'disc', category: 'maintenance', defaultPlusKm: 30000 },
-  { title: 'Akü Değişimi', icon: 'flash', category: 'maintenance', defaultPlusKm: 50000 },
-  { title: 'TÜVTÜRK Muayene', icon: 'shield-checkmark', category: 'legal', defaultPlusDays: 730 },
-  { title: 'Trafik Sigortası', icon: 'document-text', category: 'legal', defaultPlusDays: 365 },
+  // Mekanik & Periyodik Bakımlar
+  { title: 'Periyodik Bakım (Yağ & Filtre)', icon: 'construct', category: 'maintenance', defaultPlusKm: 15000 },
+  { title: 'Ön / Arka Fren Balatası', icon: 'disc', category: 'maintenance', defaultPlusKm: 30000 },
+  { title: 'Triger Kayışı & Seti', icon: 'sync', category: 'maintenance', defaultPlusKm: 80000 },
+  { title: 'Buji & Ateşleme Sistemi', icon: 'flash', category: 'maintenance', defaultPlusKm: 40000 },
+  { title: 'Akü Değişimi', icon: 'battery-charging', category: 'maintenance', defaultPlusKm: 50000 },
+  { title: 'Şanzıman & Diferansiyel Yağı', icon: 'water', category: 'maintenance', defaultPlusKm: 60000 },
+  { title: 'Lastik Değişimi / Rot-Balans', icon: 'git-commit', category: 'maintenance', defaultPlusKm: 40000 },
+  { title: 'Ön Takım & Amortisör', icon: 'hardware-chip', category: 'maintenance', defaultPlusKm: 50000 },
+  { title: 'Klima Gazı & Bakımı', icon: 'snow', category: 'maintenance', defaultPlusKm: 30000 },
+
+  // Yasal, Sigorta & Kontroller
+  { title: 'TÜVTÜRK Araç Muayenesi', icon: 'shield-checkmark', category: 'legal', defaultPlusDays: 730 },
+  { title: 'Egzoz Emisyon Ölçümü', icon: 'cloud', category: 'legal', defaultPlusDays: 365 },
+  { title: 'Zorunlu Trafik Sigortası', icon: 'document-text', category: 'legal', defaultPlusDays: 365 },
   { title: 'Kasko Poliçesi', icon: 'car', category: 'legal', defaultPlusDays: 365 },
 ];
 
@@ -164,7 +174,7 @@ export const ServiceScreen = () => {
         <View>
           <Text style={styles.title}>Bakım & Masraflar</Text>
           <Text style={styles.subtitle}>
-            {vehicle ? `${vehicle.plate} • Toplam Masraf: ${totalSpent.toLocaleString('tr-TR')} ₺` : 'Araç Seçilmedi'}
+            {vehicle ? `${vehicle.plate} • Toplam: ${totalSpent.toLocaleString('tr-TR')} ₺` : 'Araç Seçilmedi'}
           </Text>
         </View>
         <TouchableOpacity style={styles.quickAddBtn} onPress={openAddModal}>
@@ -266,7 +276,6 @@ export const ServiceScreen = () => {
       <Modal visible={isModalOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.sheetContainer}>
-            {/* Tutma Çubuğu */}
             <View style={styles.handleBar} />
 
             <View style={styles.modalHeader}>
@@ -277,7 +286,7 @@ export const ServiceScreen = () => {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-              {/* Kategori Seçici Sekmeler */}
+              {/* Kategori Seçici Tablar */}
               <View style={styles.categoryTabs}>
                 <TouchableOpacity
                   style={[styles.categoryTab, category === 'maintenance' && styles.categoryTabActive]}
@@ -316,9 +325,13 @@ export const ServiceScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Hızlı Şablonlar (Seçili Kategoriye Göre Filtreli) */}
+              {/* Hızlı Şablonlar (Yatay Kaydırılabilir Çipler) */}
               <Text style={styles.fieldLabel}>Önerilen İşlem:</Text>
-              <View style={styles.templateRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.templateScrollContainer}
+              >
                 {TEMPLATES.filter((t) => t.category === category).map((t, idx) => {
                   const isSel = title.startsWith(t.title);
                   return (
@@ -339,9 +352,9 @@ export const ServiceScreen = () => {
                     </TouchableOpacity>
                   );
                 })}
-              </View>
+              </ScrollView>
 
-              {/* İşlem Adı */}
+              {/* İşlem Başlığı */}
               <Text style={styles.fieldLabel}>İşlem Başlığı *</Text>
               <TextInput
                 style={styles.input}
@@ -350,7 +363,7 @@ export const ServiceScreen = () => {
                 onChangeText={setTitle}
               />
 
-              {/* Tarih & KM & Tutar Satırları */}
+              {/* KM ve Tutar Girişleri */}
               <View style={styles.formGridRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>İşlem KM *</Text>
@@ -389,9 +402,8 @@ export const ServiceScreen = () => {
                 <Text style={styles.changeText}>Takvimden Değiştir</Text>
               </TouchableOpacity>
 
-              {/* Kategoriye Özel Dinamik Hatırlatıcı Bölümü */}
+              {/* Kategoriye Göre Özelleşen Hedef Alanı */}
               {category === 'maintenance' ? (
-                /* MEKANİK BAKIM: Yalnızca Hedef KM ve Hızlı +10k / +15k Çipleri */
                 <View style={styles.targetSection}>
                   <Text style={styles.fieldLabel}>Sonraki Bakım Hedef Kilometresi:</Text>
                   <TextInput
@@ -402,20 +414,19 @@ export const ServiceScreen = () => {
                     onChangeText={setNextDueOdo}
                   />
                   <View style={styles.quickKmRow}>
-                    <Text style={styles.quickKmLabel}>Hızlı Ekle:</Text>
+                    <Text style={styles.quickKmLabel}>Hızlı KM Ekle:</Text>
                     <TouchableOpacity style={styles.quickKmChip} onPress={() => addKmOffset(10000)}>
-                      <Text style={styles.quickKmChipText}>+10.000 km</Text>
+                      <Text style={styles.quickKmChipText}>+10.000</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.quickKmChip} onPress={() => addKmOffset(15000)}>
-                      <Text style={styles.quickKmChipText}>+15.000 km</Text>
+                      <Text style={styles.quickKmChipText}>+15.000</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.quickKmChip} onPress={() => addKmOffset(20000)}>
-                      <Text style={styles.quickKmChipText}>+20.000 km</Text>
+                      <Text style={styles.quickKmChipText}>+20.000</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               ) : (
-                /* YASAL/POLİÇE: Yalnızca Bitiş / Geçerlilik Tarihi */
                 <View style={styles.targetSection}>
                   <Text style={styles.fieldLabel}>Poliçe / Muayene Bitiş Tarihi (Geri Sayım):</Text>
                   <TouchableOpacity
@@ -438,7 +449,7 @@ export const ServiceScreen = () => {
               <Text style={styles.fieldLabel}>Usta / Servis Notları (Opsiyonel)</Text>
               <TextInput
                 style={[styles.input, { height: 50 }]}
-                placeholder="Örn: Yağ ve filtreler değişti, rot-balans yapıldı."
+                placeholder="Örn: Filtreler değişti, rot-balans yapıldı."
                 value={notes}
                 onChangeText={setNotes}
               />
@@ -622,7 +633,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  /* Bottom Sheet Stilleri */
+  /* Bottom Sheet */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',
@@ -693,10 +704,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 6,
   },
-  templateRow: {
+  templateScrollContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
+    paddingVertical: 4,
     marginBottom: SPACING.xs,
   },
   templatePill: {
